@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Env & secrets
+.env
+.env.local
+*.pem
+keys/
+service-account*.json
+
+# Local state
+.anbu/
+*.log
+.DS_Store
+
+# Submission working files. Kept locally, never pushed: drafts, answer sheets
+# and run sheets for one person on one day. Not part of what the repo is for,
+# and the repo's own README should not point a stranger at a beat sheet.
+# Ignored by directory rather than by name, so the next draft does not have to
+# remember to add itself.
+docs/content/
+docs/takes/
+docs/DEMO_SCRIPT.md
+docs/DEMO_SCRIPT_4MIN.md
+docs/proposals/recording-window-plan.md
+docs/proposals/consolidated-build-plan.md

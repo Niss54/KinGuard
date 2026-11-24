@@ -1,0 +1,50 @@
+[project]
+name = "kinguard"
+version = "0.1.0"
+description = "KinGuard: Autonomous eldercare and insurance coordination"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Nishant Maurya"}
+]
+requires-python = ">=3.12"
+dependencies = [
+    "cryptography>=50.0.0",
+    "fastapi>=0.141.1",
+    "fpdf2>=2.8.8",
+    "google-adk>=2.7.1",
+    "google-cloud-firestore>=2.28.1",
+    "google-cloud-pubsub>=2.39.1",
+    "google-cloud-storage>=3.13.1",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.3",
+    "segno>=1.6.1",
+    "uvicorn[standard]>=0.52.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["kinguard"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "real_extraction: exercise the real extract_symptoms, with the client stubbed",
+    "real_translation: exercise the real translate.render, with the client stubbed",
+    "memory_bank: needs a real Agent Engine Memory Bank in ANBU_MEMORY_BANK",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[dependency-groups]
+dev = [
+    "pillow>=12.3.0",
+]
