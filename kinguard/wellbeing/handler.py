@@ -1,0 +1,683 @@
+"""What happens after a check-in is stored.
+
+Ordinary check-ins end here with an acknowledgement. A check-in that the
+deterministic severity table flags as HIGH gets a person involved: a case is
+opened, triage runs on the recognised symptom terms exactly as it would for any
+other intake, the consented care circle is told, and the sender is told to call
+an ambulance.
+
+The order matters and is not arbitrary. Notification happens BEFORE the reply
+is composed, because the reply says whether anyone was actually alerted and
+that sentence has to be true. It is the one message in this system where a
+false claim could get somebody hurt.
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+
+from kinguard import service
+from kinguard.comms import consent, localtime
+from kinguard.provenance.store import PARENT_SUBJECT
+from kinguard.schemas import MessageClass, WellbeingEntry
+from kinguard.wellbeing import escalation as esc
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Handled:
+    reply: str
+    escalated: bool = False
+    case_id: str | None = None
+    alerted: list[str] = field(default_factory=list)
+    not_alerted: list[str] = field(default_factory=list)
+    called: list[str] = field(default_factory=list)
+
+
+def handle_unclear_voice(entry: WellbeingEntry, parent_id: str) -> Handled:
+    """A voice note nobody could make out.
+
+    A case IS opened. She recorded something urgent enough to send, and the
+    failure to understand it does not make the event less real — it makes it
+    less legible, which is a reason to involve people rather than fewer.
+
+    But no triage runs and no severity is set, because nothing was recognised.
+    The case exists with no triage decision, which the dashboard already reads
+    as "triage has not run on this case". Inventing a severity to justify the
+    case would be exactly the inference this whole path refuses to make.
+    """
+    profile = service.load_profile(parent_id)
+    if profile is None:
+        return Handled(reply="Thanks, that's noted.")
+
+    first = profile.name.split()[0] if profile.name else "your parent"
+    case = service.open_case(parent_id)
+
+    service.append_receipt(
+        parent_id,
+        kind="wellbeing.unclear",
+        actor="wellbeing_intake",
+        payload={
+            "entry_id": entry.entry_id, "case_id": case.case_id,
+            "source_kind": entry.source_kind,
+            "note": ("A voice note arrived and could not be transcribed. A case was "
+                     "opened so a human listens to it. No symptom was identified, no "
+                     "severity was assessed, and no diagnosis exists."),
+        },
+        subject=PARENT_SUBJECT,
+    )
+
+    alerted, failed, reached = _tell_unclear(
+        case.case_id, parent_id, profile, first, entry, "voice_note_unclear",
+        consent.ADMISSION_ALERTS, MessageClass.STATUS,
+    )
+    circle_alerted, circle_failed, _ = _tell_unclear(
+        case.case_id, parent_id, profile, first, entry, "care_circle_unclear",
+        consent.OUTBOUND_NOTIFY, MessageClass.LOGISTICS, skip=reached,
+    )
+
+    everyone = _unique(alerted + circle_alerted)
+    reply = ("We could not make out your voice note. "
+             + ("We have asked " + " and ".join(everyone) + " to call you now."
+                if everyone else
+                "We could not reach anyone, so please call someone yourself.")
+             + f" If this is an emergency, call {esc.EMERGENCY_NUMBER} now.")
+    return Handled(
+        reply=reply, escalated=True, case_id=case.case_id,
+        alerted=everyone,
+        not_alerted=[n for n in _unique(failed + circle_failed) if n not in everyone],
+    )
+
+
+def _tell_unclear(case_id, parent_id, profile, first, entry, template, purpose, klass,
+                  skip: set[str] | None = None):
+    """Send one of the unclear templates to everyone holding `purpose`."""
+    from kinguard.comms.policy import consent_ok
+    from kinguard.tools import whatsapp_tools
+
+    already = skip or set()
+    alerted: list[str] = []
+    failed: list[str] = []
+    reached: set[str] = set()
+    for contact in profile.family_contacts:
+        if contact.whatsapp_e164 in already or not consent_ok(contact.consents, purpose):
+            continue
+        reached.add(contact.whatsapp_e164)
+        sent = whatsapp_tools.send_family_update(
+            case_id=case_id, parent_id=parent_id, to_e164=contact.whatsapp_e164,
+            contact_name=contact.name,
+            template_name=template,
+            template_params={
+                "parent_name": first,
+                "timestamp": localtime.for_reader(
+                    entry.received_at, contact.timezone,
+                    getattr(profile, "timezone", "Asia/Kolkata"), profile.city,
+                ),
+            },
+            message_class=klass.value,
+            purpose_override=purpose,
+        )
+        (alerted if sent.get("delivered") else failed).append(contact.name)
+    return alerted, failed, reached
+
+
+def handle(entry: WellbeingEntry, parent_id: str,
+           reading: object | None = None) -> Handled:
+    """Escalate if the table says so. Otherwise acknowledge and stop."""
+    profile = service.load_profile(parent_id)
+    conditions = list(profile.chronic_conditions) if profile else []
+
+    verdict = esc.assess(entry.text, conditions, reading=reading)
+
+    if not verdict.escalate:
+        # Which check-in she answered, when she answered one. Read off the
+        # stored prompt exactly as the phase label is, never off her words, and
+        # never off today's date: an answer sent after midnight still belongs to
+        # the question it is answering.
+        return Handled(reply=esc.reply_text(
+            verdict, [], recovery_day=_answered_day(entry, parent_id),
+            language=getattr(profile, "language", "en")))
+
+    case_id = _open_and_triage(entry, parent_id, verdict)
+
+    # Two audiences, deliberately told different things. The family decision
+    # maker is woken at 2am and needs everything the system knows. A neighbour
+    # or a listed doctor needs to be asked to go round, and is not entitled to
+    # the rest.
+    family_alerted, family_failed, _family_numbers = _tell_the_family(
+        case_id, parent_id, entry, verdict,
+    )
+    # Skipped by CONTACT, not by handset. Two people can share a phone, and
+    # filtering by number meant a neighbour on the family's number was never
+    # told anything at all.
+    circle_alerted, circle_failed = _tell_the_care_circle(
+        case_id, parent_id, verdict, skip_numbers=None,
+        skip_names={n for n in family_alerted},
+    )
+    # And the thing the neighbour will actually need when she gets there.
+    #
+    # Skipped by PERSON, never by handset. The son already had the full alert
+    # and is not the one who can show a doctor anything, so a link is noise to
+    # him. Skipping by NUMBER instead silenced the neighbour the moment she
+    # shared his phone: she was filtered out as if she were him, and the whole
+    # care-circle path went quiet while the alert still went out, so nothing
+    # looked wrong anywhere.
+    _hand_the_treating_team_a_link(case_id, parent_id,
+                                   skip_names=set(family_alerted))
+    # And the money, before anybody has to think about it.
+    _file_cashless_preauth(case_id)
+    # One person is one name, however many lists they appear on.
+    alerted = _unique(family_alerted + circle_alerted)
+    not_alerted = [n for n in _unique(family_failed + circle_failed) if n not in alerted]
+
+    # A message arriving while someone sleeps is a message that did not happen.
+    # The call goes out WITH it, not after a timer: Cloud Run cannot hold one
+    # reliably, and for crushing chest pain a two minute wait is the wrong
+    # behaviour regardless.
+    called = _ring_them(case_id, parent_id)
+
+    return Handled(
+        reply=esc.reply_text(verdict, alerted, called=called),
+        escalated=True,
+        case_id=case_id,
+        alerted=alerted,
+        not_alerted=not_alerted,
+        called=called,
+    )
+
+
+def _answered_day(entry: WellbeingEntry, parent_id: str) -> int | None:
+    """The day number of the prompt this answers, or None if it answers none.
+
+    Not `_recovery_day`, which says what day it is now. The two agree except
+    across a midnight, where hers is the question she was actually sent.
+    """
+    if getattr(entry, "phase", "") != "recovery":
+        return None
+    from kinguard.recovery import window as recovery
+
+    row = recovery.recent_prompt(parent_id)
+    try:
+        return int(row["day"]) if row else None
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _open_and_triage(entry: WellbeingEntry, parent_id: str, verdict: esc.Escalation) -> str:
+    """Open an episode and route it, recording why on both chains.
+
+    The escalation receipt goes on the parent chain and names the phrases that
+    matched, not a conclusion. "These words matched the red-flag table" is
+    auditable. "This person is having a cardiac event" would be a diagnosis
+    nobody made.
+    """
+    case = service.open_case(parent_id)
+
+    service.append_receipt(
+        parent_id,
+        kind="wellbeing.escalated",
+        actor="wellbeing_intake",
+        payload={
+            "entry_id": entry.entry_id,
+            "case_id": case.case_id,
+            # WHICH check-in this was, carried so the trace can say a recovery
+            # answer triggered this. It changes nothing about the decision
+            # below — the same table saw the same words — and it is a label on
+            # the check-in, never a finding about her.
+            "phase": getattr(entry, "phase", "acute"),
+            "prompt_id": getattr(entry, "prompt_id", None),
+            "severity": verdict.severity.value,
+            "matched_rules": verdict.matched,
+            "model_terms": verdict.model_terms,
+            "model_used": verdict.model_used,
+            "model_note": verdict.model_note,
+            "decided_by": verdict.decided_by,
+            "model_urgent": verdict.model_urgent,
+            "model_reason": verdict.model_reason,
+            "note": (
+                ("A deterministic red-flag table matched these phrases and a case "
+                 "was opened so a human is involved."
+                 if verdict.decided_by in {"rule", "both"} else
+                 "NO RULE MATCHED. The model alone judged this needs attention now, "
+                 "and a case was opened on that basis. Recorded as a model decision "
+                 "so it can be reviewed, and so a clinician can decide whether this "
+                 "presentation should become a rule.")
+                + " This is a routing decision, not a clinical assessment, and no "
+                  "diagnosis has been made."
+                + (" It came from an answer to a recovery check-in. The check-in "
+                   "asked a question and recorded the answer; the severity above "
+                   "is the same deterministic table every intake goes through, "
+                   "not anything the recovery feature decided."
+                   if getattr(entry, "phase", "acute") == "recovery" else "")
+            ),
+        },
+        subject=PARENT_SUBJECT,
+    )
+
+    from kinguard.tools import triage_tools
+
+    # Same entry point, same table, same receipt as any other intake. The
+    # symptoms are the model's normalised terms; the raw words go along as
+    # free_text so the table sees exactly what was said.
+    triage_tools.run_triage(
+        parent_id=parent_id,
+        symptoms=verdict.symptoms,
+        free_text=entry.text,
+        reported_by=entry.source,
+        lat=0.0,
+        lon=0.0,
+        case_id=case.case_id,
+    )
+    return case.case_id
+
+
+def _ring_them(case_id: str, parent_id: str) -> list[str]:
+    """Ring the family first, then the neighbour. Report who was actually dialled.
+
+    The ladder is ordered by who can do most: the family decision maker holds
+    the dashboard and the insurer relationship, the neighbour can be at the
+    door in four minutes. Both are called, because at 2am the question is not
+    who is best placed but who picks up.
+
+    Spoken content goes through the same content gate as everything else. A
+    second, ungated route "because it is only a phone call" is how a diagnosis
+    eventually escapes.
+    """
+    from kinguard.comms import consent, voice
+    from kinguard.comms.policy import classify_message, consent_ok
+    from kinguard.schemas import MessageClass
+
+    profile = service.load_profile(parent_id)
+    if profile is None:
+        return []
+
+    first = profile.name.split()[0] if profile.name else "your parent"
+    spoken = (
+        f"This is KinGuard. {first} has sent an urgent message and may need help now. "
+        "Please call her. KinGuard has not called an ambulance and cannot."
+    )
+
+    actual, hits = classify_message(spoken, MessageClass.LOGISTICS)
+    if actual is MessageClass.CLINICAL:
+        logger.warning("spoken alert blocked as clinical (%s); no call placed", hits)
+        return []
+
+    called: list[str] = []
+    for contact in profile.family_contacts:
+        may_call = (consent_ok(contact.consents, consent.ADMISSION_ALERTS)
+                    or consent_ok(contact.consents, consent.OUTBOUND_NOTIFY))
+        if not may_call:
+            continue
+
+        result = voice.place_call(contact.whatsapp_e164, spoken)
+        service.append_receipt(
+            case_id,
+            kind="voice.placed" if result.placed else "voice.not_placed",
+            actor="wellbeing_intake",
+            payload={"contact_name": contact.name, **result.as_dict(),
+                     "spoken": spoken,
+                     "note": ("A placed call is not an answered call. Whether anyone "
+                              "picked up is not known here.")},
+        )
+        if result.placed:
+            called.append(contact.name)
+    return called
+
+
+def _unique(names: list[str]) -> list[str]:
+    """Order-preserving dedupe. "alerted X and X" reads as a broken system at
+    the moment it most needs to be believed."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for name in names:
+        if name not in seen:
+            seen.add(name)
+            out.append(name)
+    return out
+
+
+def _routing_lines(case_id: str) -> tuple[str, str, str]:
+    """Hospital, distance and WHY that hospital, straight off the triage receipt.
+
+    The "why" is the part usually thrown away, and at 2am it is the difference
+    between "she is going somewhere" and "she is going somewhere further away
+    on purpose, so the bill is covered". None of it is clinical: it is
+    distance, empanelment and cost.
+    """
+    triage = next(
+        (r for r in reversed(service.get_chain(case_id).receipts)
+         if r.kind == "triage.decision"), None,
+    )
+    if triage is None:
+        return "a hospital, being arranged", "unknown", ""
+
+    recommended = triage.payload.get("recommended_hospital_id")
+    for entry in triage.payload.get("ranked") or []:
+        if entry.get("hospital_id") == recommended:
+            name = str(entry.get("name") or "a hospital")
+            distance = f"{entry.get('distance_km', 0):.1f}"
+            why = _why_only(str(triage.payload.get("explanation") or ""))
+            return name, distance, why
+    return "a hospital, being arranged", "unknown", ""
+
+
+def _why_only(explanation: str) -> str:
+    """Keep the reasoning, drop the restatement and the internal scoring.
+
+    The triage explanation opens with the severity and a "Recommending X (2.2
+    km, score 0.971)" line. The alert already names the hospital and the
+    distance, and a relevance score means nothing to someone woken at 2am, so
+    both sentences go. What is left is the part worth reading: it is further
+    away on purpose, and here is why.
+    """
+    sentences = [s.strip() for s in explanation.split(". ") if s.strip()]
+    kept = [s for s in sentences
+            if not s.startswith("Severity ") and not s.startswith("Recommending ")]
+    text = ". ".join(kept)
+    if text and not text.endswith("."):
+        text += "."
+    return text
+
+
+def _understood_as(verdict: esc.Escalation) -> str:
+    """The system showing its working, in one line.
+
+    She may have written in Tamil, or in Tamil spelled with English letters,
+    and her son may be half awake and unable to read either. The alert says it
+    is urgent; without this it never says WHY, which makes the escalation
+    illegible exactly when it needs to be obvious.
+
+    These are recognised terms, not findings. The same phrases are already on
+    the chain as matched_rules; this only puts them where the person who has to
+    act can see them.
+    """
+    terms = [t for t in dict.fromkeys(verdict.model_terms) if t]
+    if not terms:
+        return ""
+    return "Understood as: " + ", ".join(terms) + ".\n"
+
+
+def _tell_the_family(
+    case_id: str, parent_id: str, entry: WellbeingEntry, verdict: esc.Escalation
+) -> tuple[list[str], list[str], set[str]]:
+    """The full picture, to contacts who hold admission-alert consent.
+
+    Her own words are relayed. They are what she chose to send over WhatsApp
+    herself, and a child who cannot tell "I cannot breathe" from "I turned my
+    ankle" cannot judge how hard to panic. It still goes through the content
+    gate: a message that turns out to carry a lab value is blocked like any
+    other.
+    """
+    from kinguard.comms import consent
+    from kinguard.comms.policy import consent_ok
+    from kinguard.tools import whatsapp_tools
+
+    profile = service.load_profile(parent_id)
+    if profile is None:
+        return [], [], set()
+
+    first = profile.name.split()[0] if profile.name else "your parent"
+    hospital, distance, why = _routing_lines(case_id)
+    policy = getattr(profile, "policy", None)
+    cashless = ("Cashless should apply at this hospital" if policy and policy.cashless_eligible
+                else "Cashless is not confirmed for this admission")
+
+    # A recovery answer gets a different message, not a smaller response.
+    #
+    # Everything before this line already ran: the case was opened, the same
+    # deterministic table saw the same words, triage ranked hospitals, and the
+    # calls are about to go out. What changes is only what the family is TOLD.
+    # The acute alert leads with a hospital because she is on her way to one;
+    # a woman at home on day three is not, and an alert that says "she is being
+    # directed to Sacred Heart" when nobody has taken her anywhere would be
+    # describing a journey that is not happening.
+    #
+    # So the recovery wording reports what was heard and asks a human to call.
+    # It names no hospital, offers no interpretation, and gives no instruction
+    # beyond the one instruction this system is ever allowed to give: call her,
+    # and if you cannot, call 108.
+    recovery = getattr(entry, "phase", "acute") == "recovery"
+    day = _recovery_day(parent_id) if recovery else None
+
+    alerted: list[str] = []
+    failed: list[str] = []
+    reached: set[str] = set()
+    for contact in profile.family_contacts:
+        if not consent_ok(contact.consents, consent.ADMISSION_ALERTS):
+            continue
+        reached.add(contact.whatsapp_e164)
+        params = {
+                "parent_name": first,
+                # Rendered per recipient: the son abroad and a neighbour two
+                # streets away read the same instant differently, and neither
+                # should be doing timezone arithmetic at 2am.
+                "timestamp": localtime.for_reader(
+                    entry.received_at, contact.timezone,
+                    getattr(profile, "timezone", "Asia/Kolkata"), profile.city,
+                ),
+                "said": entry.text,
+                "hospital_name": hospital,
+                "distance_km": distance,
+                "why_hospital": why,
+                "cashless_status": cashless,
+                "understood_as": _understood_as(verdict),
+                # A transcript is what a model heard, not what she said.
+                # Quoting it as her words would put words in her mouth, and her
+                # son would act on them.
+                "words_note": (
+                    "That is what KinGuard heard in her voice note. It may be "
+                    "imperfect, so listen to the recording in the dashboard.\n"
+                    if entry.source_kind == "voice" else
+                    "Those are her own words, not a medical assessment.\n"
+                ),
+        }
+        if recovery:
+            params = {
+                "parent_name": params["parent_name"],
+                "timestamp": params["timestamp"],
+                "day": str(day) if day else "unknown",
+                "words_note": params["words_note"],
+                "understood_as": params["understood_as"],
+            }
+
+        sent = whatsapp_tools.send_family_update(
+            case_id=case_id, parent_id=parent_id, to_e164=contact.whatsapp_e164,
+            contact_name=contact.name,
+            template_name=("recovery_escalation_family" if recovery
+                           else "urgent_family_alert"),
+            template_params={**params, "said": entry.text},
+            message_class="status",
+            # Selection and gate must demand the SAME purpose. Without this the
+            # class implies status_updates while the loop selects on
+            # admission_alerts, and a contact who consented to admission alerts
+            # is silently skipped by the gate after being chosen to receive one.
+            purpose_override=consent.ADMISSION_ALERTS,
+        )
+        # Quoting her is what makes the alert useful, and it is also the only
+        # thing in it the gate can refuse. If her own words carry a lab value
+        # the message is blocked, and without a second attempt the one person
+        # who can actually act is the only one not told. Being more clinically
+        # precise must not make a mother harder to help.
+        if not sent.get("allowed"):
+            logger.info("family alert withheld her words for %s; retrying without the quote",
+                        contact.name)
+            sent = whatsapp_tools.send_family_update(
+                case_id=case_id, parent_id=parent_id, to_e164=contact.whatsapp_e164,
+                contact_name=contact.name,
+                template_name=("recovery_escalation_family_withheld" if recovery
+                               else "urgent_family_alert_withheld"),
+                template_params=params,
+                message_class="status",
+                purpose_override=consent.ADMISSION_ALERTS,
+            )
+
+        (alerted if sent.get("delivered") else failed).append(contact.name)
+    return alerted, failed, reached
+
+
+def _file_cashless_preauth(case_id: str) -> None:
+    """Ask for cashless cover at admission, without anybody asking for it.
+
+    The first insurance act on the morning a parent is admitted is getting
+    cashless pre-authorisation filed, so the family does not pay the hospital
+    out of pocket and wait months to be repaid. A son who is awake does it in
+    the first ten minutes. This system exists to do what he would do while he
+    is asleep eleven time zones away, so a lane that waits for somebody to
+    trigger it has already failed at the thing it is for.
+
+    It goes out on the same fact that opened the case: she is being taken to a
+    hospital. Nothing clinical travels with it - the request carries the policy,
+    the sum insured, the admission date and the hospital, and the pre-auth lane
+    reads no severity and no diagnosis.
+
+    NEVER RAISES. An emergency alert that failed because an insurer's clock
+    could not be started would be a far worse outcome than an admission with no
+    pre-authorisation on it. The alert is the thing that matters in the first
+    minute; this is the thing that matters in the first hour.
+    """
+    try:
+        from kinguard.preauth import request_cashless_preauth
+
+        request_cashless_preauth(case_id)
+    except Exception:
+        logger.exception("could not file a cashless pre-authorisation for %s", case_id)
+
+
+def _recovery_day(parent_id: str) -> int | None:
+    """Which day of the window this answer arrived on. None rather than a guess."""
+    try:
+        from kinguard.recovery import checkin
+
+        return checkin.day_of(parent_id)
+    except Exception:
+        logger.exception("could not read the recovery day; the alert goes without it")
+        return None
+
+
+def _hand_the_treating_team_a_link(case_id: str, parent_id: str,
+                                  skip_names: set[str] | None = None) -> None:
+    """Put an emergency-access link in the hands of whoever is with her.
+
+    KinGuard exists to do what a present son would do while the son is asleep
+    eleven time zones away, so a workflow that needs him is a workflow that has
+    already failed. Until now a handoff link only existed if HE minted one from
+    the dashboard: the neighbour reached the hospital with nothing to show the
+    treating team, and the person the whole system is standing in for had to
+    wake up and copy a URL.
+
+    So it is minted here, when she is escalated, and sent to the people who are
+    physically there. The son is told separately, as somebody who should know,
+    not as the courier.
+
+    WRITE-SCOPED, deliberately. A treating team that can read her allergies but
+    cannot record what they ordered sends everyone back to the son, which is
+    the failure this exists to remove. Everything that makes that safe is
+    already true: the link dies in an hour, every open is receipted, notes are
+    attributed and append-only, and the family can revoke it in one act.
+
+    Never raises. This runs inside an escalation, and an emergency alert that
+    failed because a link could not be minted would be a worse outcome than an
+    admission with no link.
+    """
+    from kinguard.care_circle import notify as care_notify
+    from kinguard.handoff import access
+
+    try:
+        profile = service.load_profile(parent_id)
+        if profile is None:
+            return
+        skip = {n.strip().lower() for n in (skip_names or set())}
+        consented = [c for c in care_notify.care_circle(parent_id)
+                     if c.name.strip().lower() not in skip]
+        # WHOEVER IS PHYSICALLY THERE, which is a role and not a consent.
+        #
+        # care_circle() answers "who agreed to be notified", and the son agreed,
+        # so he was in this list and got the code. That put the picture in the
+        # hands of the one person who cannot show it to anybody: he is asleep
+        # eleven time zones away, and the neighbour standing next to the doctor
+        # had nothing. Being told is not the same as being there.
+        #
+        # He still hears about the admission. He is told as somebody who should
+        # know, by the alert that goes out beside this one, and not as the
+        # courier.
+        present = [c for c in consented if getattr(c, "role", "") == "care_circle"]
+        # With nobody named as being there, the only hands available are his.
+        # A link nobody holds helps no one, so this falls back rather than
+        # refusing, and the fallback is the old behaviour.
+        contacts = present or consented
+        if not contacts:
+            return
+
+        token = access.mint(case_id, allow_notes=True)
+    except Exception:
+        # Includes the parent not having consented to emergency clinical
+        # sharing, which is a refusal and not a fault.
+        logger.info("no handoff link was shared for %s", case_id, exc_info=True)
+        return
+
+    import os
+
+    from kinguard.tools import whatsapp_tools
+
+    base = os.getenv("ANBU_PUBLIC_BASE_URL", "").rstrip("/")
+    params = {
+        "parent_name": profile.name.split()[0] if profile.name else "your parent",
+        "handoff_url": f"{base}/handoff/{token}" if base else f"/handoff/{token}",
+        "expires_minutes": str(access.HANDOFF_TTL_SECONDS // 60),
+    }
+    for contact in contacts:
+        try:
+            whatsapp_tools.send_family_update(
+                case_id=case_id, parent_id=parent_id,
+                to_e164=contact.whatsapp_e164, contact_name=contact.name,
+                template_name="clinician_handoff_link", template_params=params,
+                message_class="logistics",
+                purpose_override=consent.OUTBOUND_NOTIFY,
+                # The picture, because she is the one holding the phone and he
+                # is the one who needs what is on it.
+                attach_qr_of=params["handoff_url"],
+            )
+        except Exception:
+            logger.exception("could not share the handoff link with the care circle")
+
+
+def _tell_the_care_circle(
+    case_id: str, parent_id: str, verdict: esc.Escalation,
+    skip_numbers: set[str] | None = None,
+    skip_names: set[str] | None = None,
+) -> tuple[list[str], list[str]]:
+    """Notify consented contacts. Returns who was actually reached.
+
+    Logistics only, through the existing gate: the care circle is told to call,
+    never what the message said. The symptom words stay in the credentialed
+    record.
+    """
+    from kinguard.care_circle import notify as care_notify
+
+    profile = service.load_profile(parent_id)
+    name = profile.name.split()[0] if profile and profile.name else "your parent"
+
+    hospital, _, _ = _routing_lines(case_id)
+    try:
+        results = care_notify.notify(
+            case_id=case_id,
+            parent_id=parent_id,
+            hospital_name=hospital,
+            timestamp="just now",
+            now=datetime.now(UTC),
+            skip_numbers=skip_numbers,
+            skip_names=skip_names,
+            cashless_status=(
+                f"An urgent message was received from {name}. Please call them now"
+            ),
+        )
+    except Exception:
+        logger.exception("care-circle notification failed")
+        return [], []
+
+    alerted = [r.contact_name for r in results if r.delivered]
+    not_alerted = [r.contact_name for r in results if not r.delivered]
+    return alerted, not_alerted
