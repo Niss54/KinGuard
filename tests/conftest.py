@@ -1,0 +1,170 @@
+import os
+
+# Set before anything imports config: the suite must never touch GCP, and a
+# developer's .env pointing at a real project must not change that.
+os.environ["ANBU_STORE_BACKEND"] = "memory"
+os.environ["ANBU_PUBSUB_ENABLED"] = "false"
+# The demo caption is a recording affordance and OFF is its real default. A
+# developer's .env switching it on must not make the suite agree that captions
+# are normal, for the same reason the store backend is pinned above.
+os.environ["ANBU_DEMO_ROLE_TAGS"] = "off"
+# Same reason, and a sharper one. A recording sets this to 0 so a check-in goes
+# out whatever the hour where she is. That is a setting for one afternoon, not
+# the policy, and the suite must keep testing that nothing reaches a seventy-one
+# year old before nine in the morning.
+os.environ["ANBU_RECOVERY_HOUR"] = "9"
+# The suite must not reach Google Cloud, and a developer's .env is loaded before
+# this runs. So the bank is emptied here rather than inherited: every hermetic
+# memory test stays on the unconfigured path and the one live cross-session
+# test skips, whatever happens to be in .env. Asking for the live test is a
+# separate, deliberate act:
+#
+#   ANBU_MEMORY_BANK_LIVE=projects/.../reasoningEngines/... pytest -m memory_bank
+#
+# A second name rather than the real one, so a Memory Bank can never end up in
+# a test run because somebody's shell already had it exported.
+# Set empty rather than deleted: python-dotenv loads the developer's .env when
+# kinguard is first imported, and it will fill a name that is absent but
+# will not override one that is already present.
+os.environ["ANBU_MEMORY_BANK"] = os.environ.get("ANBU_MEMORY_BANK_LIVE", "")
+# Language detection is a real model call on a real project. The suite never
+# makes one, and a test that wants the detector exercises `detect` directly
+# with `_ask` patched, so the parsing and the refusals are covered without
+# spending anything.
+os.environ["ANBU_DETECT_LANGUAGE_MODE"] = "off"
+os.environ.setdefault("ANBU_SIGNING_KEY_B64", "")
+
+import pytest
+
+from kinguard.config import settings
+from kinguard.provenance.store import MemoryStore, set_store
+
+settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def no_payment_provider_calls(monkeypatch):
+    """The suite never talks to a payment provider.
+
+    ANBU_PAYMENT_MODE lives in .env, so the moment Razorpay was wired the whole
+    suite started making real API calls: 3 seconds became 28, and a machine
+    without keys or without a network would have failed for reasons unrelated
+    to the code under test.
+
+    A test that wants the provider path asks for it explicitly by setting the
+    mode itself, which is a visible decision rather than an inherited one.
+    """
+    monkeypatch.setenv("ANBU_PAYMENT_MODE", "simulated")
+
+
+@pytest.fixture(autouse=True)
+def no_model_calls_from_dictation(monkeypatch):
+    """The same trap, one feature later.
+
+    Reading an ordered test out of a dictation is a Gemini call, and the draft
+    endpoint runs it. The suite went from 10 seconds to 34 the moment it was
+    wired, which is a real network call the tests never asked for.
+
+    A test that wants the extraction stubs `_call_model`, which is the one seam
+    it goes through.
+    """
+    monkeypatch.setenv("ANBU_DICTATION_MODE", "off")
+    monkeypatch.setenv("ANBU_DIAGNOSTICS_MODE", "seeded")
+
+
+@pytest.fixture(autouse=True)
+def fresh_store():
+    """Every test gets its own store — receipt sequences must not leak between tests."""
+    set_store(MemoryStore())
+    yield
+
+
+TRANSPORT_ENV = (
+    "ANBU_WHATSAPP_MODE",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_API_KEY_SID",
+    "TWILIO_API_KEY_SECRET",
+    "TWILIO_WHATSAPP_FROM",
+    "WHATSAPP_ACCESS_TOKEN",
+    "WHATSAPP_PHONE_NUMBER_ID",
+)
+
+
+@pytest.fixture(autouse=True)
+def no_ambient_transport(monkeypatch):
+    """The suite must never reach a real provider.
+
+    A populated .env is normal on a developer machine, and without this the
+    tests would quietly start spending the account's message quota — and pass
+    or fail depending on whose laptop they ran on.
+    """
+    for var in TRANSPORT_ENV:
+        monkeypatch.delenv(var, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def no_model_calls(monkeypatch, request):
+    """No test reaches Gemini unless it explicitly asks to.
+
+    Symptom extraction is advisory and every failure path already returns "no
+    terms", so the default here is the same thing a timeout produces. That is
+    deliberate: it means the suite exercises the deterministic keyword floor,
+    which is the part that must hold when the model is unavailable. A test that
+    wants model behaviour fakes it explicitly.
+    """
+    # A test that needs the real function marks itself; it must still not
+    # reach the network, so it stubs the client instead.
+    if request.node.get_closest_marker("real_extraction"):
+        return
+
+    from kinguard.wellbeing import escalation
+
+    # Patch read(), not extract_symptoms(): assess() calls read() directly, and
+    # patching only the wrapper let the whole suite phone Gemini for real. That
+    # has now happened twice — once for Twilio, once here — so the rule is to
+    # stub the function the code path actually reaches.
+    monkeypatch.setattr(
+        escalation, "read",
+        lambda text: escalation.Reading(note="model disabled in tests"),
+    )
+    monkeypatch.setattr(
+        escalation, "extract_symptoms",
+        lambda text: ([], False, "model disabled in tests"),
+    )
+
+
+@pytest.fixture(autouse=True)
+def no_translation_calls(monkeypatch, request):
+    """No test reaches Gemini for a translation unless it asks to.
+
+    Same rule, same reason, and the same mistake already made twice in this
+    file: patch the thing the code path actually reaches. Translation falls
+    back to the recorded English on every failure, and "switched off" is one of
+    those failures, so the default here exercises the fallback — which is the
+    branch that has to hold when Vertex is slow or down.
+
+    A test that wants a rendering marks itself `real_translation` and stubs the
+    client. It still must not touch the network.
+    """
+    if request.node.get_closest_marker("real_translation"):
+        return
+    monkeypatch.setenv("ANBU_TRANSLATE_MODE", "off")
+
+
+def followed(text: str) -> str:
+    """The message with every short alias replaced by what it points at.
+
+    Links sent over WhatsApp are aliased now, so asserting on a destination
+    means resolving one. Tests that used to look for "/app" in the body are
+    asking a real question - does the family get told where her words are -
+    and this keeps them asking it rather than being loosened to "some link".
+    """
+    import re
+
+    from kinguard.comms import shortlinks
+
+    def swap(match):
+        return shortlinks.resolve(match.group(1)) or match.group(0)
+
+    return re.sub(r"https?://[^\s]*?/s/([a-z2-9]+)", swap, text or "")
