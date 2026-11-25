@@ -1,0 +1,2798 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="KinGuard: NRI elderly emergency and hospital coordination companion with privacy-first Firebase AI Logic hybrid triage assistance and verifiable provenance receipts.">
+<link rel="icon" href="data:,">
+<title>KinGuard: family dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Atkinson Hyperlegible Next: drawn for low-vision readers. For an eldercare
+     record read by frightened people on a phone, that is the right typeface.
+     A webfont only, with a full fallback stack. No CDN scripts ship here. -->
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Design system: "Vigilant Care", generated in Google Stitch for this project.
+   Red is reserved for severity and alerts; teal carries the chrome. */
+:root{
+  --surface:#f6f7fb; --card:#ffffff; --card-low:#eff4ff;
+  --ink:#0b1c30; --ink-soft:#4d5c6e; --ink-mute:#7d8b9c;
+  --line:#e3e8f0; --line-soft:#eef1f6;
+  --teal:#0d7d70; --teal-ink:#065f56; --teal-bg:#e2f6f2;
+  --red:#c2313b; --red-ink:#93000a; --red-bg:#fdecec;
+  --amber:#b06a00; --amber-bg:#fdf3e2;
+  --violet:#5b4b9a; --violet-bg:#efecfb;
+  --slate-bg:#eef2f8;
+  --r-sm:6px; --r:10px; --r-lg:14px;
+  --shadow:0 1px 2px rgba(11,28,48,.05), 0 1px 3px rgba(11,28,48,.04);
+  --pad:16px;
+  --font:"Atkinson Hyperlegible Next","Atkinson Hyperlegible",-apple-system,
+         BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--surface);color:var(--ink);font-family:var(--font);
+     font-size:16px;line-height:1.5;padding-bottom:84px;-webkit-font-smoothing:antialiased}
+/* Atkinson Hyperlegible slashes its zero on purpose, to separate 0 from O for
+   low-vision readers. That is the reason the typeface was chosen, but on a
+   recorded screen the slash reads as a rendering glitch, and it lands on every
+   rupee figure in the demo. Turn the feature off rather than give up the
+   typeface: the letterform disambiguation that matters most here is in the
+   whole alphabet, not the zero alone. */
+body, input, button, pre, code{font-feature-settings:"zero" 0, "ss01" 0;
+                               font-variant-numeric:normal}
+
+/* ---- app bar ---------------------------------------------------------- */
+.bar{position:sticky;top:0;z-index:50;background:var(--card);
+     border-bottom:1px solid var(--line);padding:12px var(--pad)}
+.bar-in{max-width:760px;margin:0 auto;display:flex;align-items:center;
+        justify-content:space-between;gap:8px 10px}
+.brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1 1 auto}
+.brand>div{min-width:0}
+.mark{width:28px;height:28px;border-radius:8px;background:var(--teal);
+      color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;flex:none}
+.brand h1{font-size:17px;font-weight:800;letter-spacing:-.01em;white-space:nowrap}
+.brand .sub{font-size:11.5px;color:var(--ink-mute);font-weight:600;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-end{display:flex;align-items:center;gap:8px;flex:none}
+@media(max-width:540px){#hyb-hdr{display:none}.bar-end{gap:6px}}
+.acct{position:relative}
+.avatar{width:34px;height:34px;border-radius:999px;border:1px solid var(--line);
+  background:var(--slate-bg);color:var(--ink-soft);display:grid;place-items:center;
+  font-weight:800;font-size:13px;cursor:pointer;padding:0;overflow:hidden;
+  font-family:inherit}
+.avatar:hover{border-color:var(--teal)}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar.signed{border-color:var(--teal);background:var(--teal-bg);color:var(--teal-ink)}
+.menu{position:absolute;right:0;top:44px;width:308px;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:0 8px 28px
+  rgba(11,28,48,.14);padding:14px;z-index:40;text-align:left}
+.menu h4{font-size:15px;font-weight:800;margin:0}
+.menu .who{display:flex;gap:10px;align-items:center;margin-bottom:4px}
+.menu .email{font-size:12.5px;color:var(--ink-mute);word-break:break-all}
+.menu .grp{border-top:1px solid var(--line-soft);margin-top:12px;padding-top:12px}
+.menu .grp h5{font-size:11px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 7px}
+.menu .line{display:flex;justify-content:space-between;gap:10px;font-size:13px;
+  padding:3px 0;color:var(--ink)}
+.menu .line span:first-child{color:var(--ink-soft);flex:0 0 auto}
+.menu .line span:last-child{text-align:right;font-weight:700;min-width:0;
+  overflow-wrap:anywhere}
+.menu .act{display:block;width:100%;text-align:left;background:none;border:0;
+  font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink);
+  padding:9px 8px;margin:0 -8px;border-radius:var(--r-sm);cursor:pointer}
+.menu .act:hover{background:var(--surface)}
+.menu .act.danger{color:var(--red-ink)}
+
+/* ---- shell ------------------------------------------------------------ */
+main{max-width:760px;margin:0 auto;padding:var(--pad)}
+.strip{border-radius:var(--r);padding:6px 12px;font-size:12.5px;font-weight:700;
+       letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+/* Quieter than it was, and deliberately still present. The words are
+   load-bearing: this record is public, and without them a screenshot of a
+   synthetic patient reads as a real one. Alarm-red trained the eye to skip it,
+   which is the one failure that would actually cost us. So it drops to a
+   footnote: muted ground, a single amber rule down the left edge, and keeps
+   saying exactly what it said. */
+.strip.demo{background:var(--slate-bg);color:var(--ink-soft);
+            border:1px solid var(--line);border-left:3px solid var(--amber);
+            font-size:11.5px;font-weight:600}
+.strip.note{background:var(--card);color:var(--ink-soft);border:1px solid var(--line);
+            font-weight:400;letter-spacing:0;font-size:13px;line-height:1.5;display:block}
+.lock{display:inline-flex;align-items:center;gap:6px;background:var(--teal-bg);
+      color:var(--teal-ink);border-radius:999px;padding:5px 11px;font-size:11.5px;
+      font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:12px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+      box-shadow:var(--shadow);padding:var(--pad);margin-bottom:14px;overflow:hidden}
+.card.edge-red{border-left:4px solid var(--red)}
+.card.edge-teal{border-left:4px solid var(--teal)}
+.card.edge-amber{border-left:4px solid var(--amber)}
+.card > h2{font-size:19px;font-weight:800;letter-spacing:-.01em;color:var(--ink);
+           overflow-wrap:anywhere;
+           margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line-soft)}
+.card > h2.mini{font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+                color:var(--ink-mute);border-bottom:0;padding-bottom:0;margin-bottom:12px}
+.sec{font-size:19px;font-weight:800;letter-spacing:-.01em;margin:22px 0 12px}
+.title{margin:2px 0 16px}
+.title h1{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.title p{font-size:14px;color:var(--ink-mute);margin-top:5px;line-height:1.5}
+
+/* ---- hero ------------------------------------------------------------- */
+.hero .lbl{font-size:11.5px;font-weight:800;letter-spacing:.08em;
+           text-transform:uppercase;color:var(--ink-mute)}
+.sev{display:inline-flex;align-items:center;gap:9px;margin:6px 0 4px}
+.sev b{font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.05;color:var(--red)}
+.sev.ok b{color:var(--teal)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--red);flex:none}
+.hero .why{font-size:14px;color:var(--ink-soft);margin-bottom:14px}
+.hero .hosp{font-size:21px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;
+      padding:4px 10px;font-size:11.5px;font-weight:800;letter-spacing:.03em;white-space:nowrap}
+.p-teal{background:var(--teal-bg);color:var(--teal-ink)}
+.p-red{background:var(--red-bg);color:var(--red-ink)}
+.p-amber{background:var(--amber-bg);color:var(--amber)}
+.p-violet{background:var(--violet-bg);color:var(--violet)}
+.p-slate{background:var(--slate-bg);color:var(--ink-soft)}
+.pills{display:flex;flex-wrap:wrap;gap:7px}
+.probe-out{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.probe-row{display:flex;gap:10px;align-items:flex-start}
+.probe-row .pill{flex:0 0 auto;margin-top:1px}
+
+/* ---- rows ------------------------------------------------------------- */
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+     padding:11px 0;border-bottom:1px solid var(--line-soft)}
+.row:last-child{border-bottom:0;padding-bottom:0}
+.row:first-of-type{padding-top:0}
+.row .k{color:var(--ink-soft);font-size:14.5px;flex:0 0 auto;max-width:46%}
+.row .v{text-align:right;font-weight:700;font-size:15px;flex:1;min-width:0;
+        overflow-wrap:anywhere}
+.row .v.long{font-weight:400;font-size:14.5px;text-align:left;line-height:1.55}
+/* A value longer than a few words gets its own line, left aligned and at normal
+   weight. Right-aligned bold prose in a phone-width column cannot be read. */
+.row.stack{display:block}
+.row.stack .k{max-width:none;margin-bottom:5px}
+.row.stack .v{text-align:left;font-weight:400;font-size:14.5px;line-height:1.6}
+.num{font-variant-numeric:tabular-nums}
+.unk{color:var(--ink-mute);font-weight:400;font-style:italic}
+.why2{display:block;font-size:12.5px;color:var(--ink-mute);font-style:normal;
+      font-weight:400;margin-top:3px;line-height:1.45}
+
+
+/* ---- bills: what you pay, at a glance ---------------------------------- */
+/* Thirty-six rows of "INR 0 · no sub-limit applies to this item" buried the
+   three lines that actually cost money. The split is a proportion, so it is
+   drawn as one; the reason is a chip, not a sentence; and the lines that cost
+   nothing are folded away rather than competing for the same attention. */
+.headline{padding:4px 0 2px}
+.headline .lbl{font-size:11.5px;font-weight:800;letter-spacing:.08em;
+               text-transform:uppercase;color:var(--ink-mute)}
+.headline .amt{font-size:40px;font-weight:800;letter-spacing:-.025em;
+               line-height:1.05;color:var(--red);font-variant-numeric:tabular-nums}
+.headline .of{font-size:13.5px;color:var(--ink-soft);margin-top:5px}
+.split{display:flex;height:12px;border-radius:99px;overflow:hidden;
+       background:var(--line-soft);margin:14px 0 8px}
+.split i{display:block;height:100%}
+.split .cov{background:var(--teal)}
+.split .pay{background:var(--red)}
+.legend{display:flex;gap:16px;font-size:12.5px;color:var(--ink-soft);flex-wrap:wrap}
+.legend b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.key{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px}
+
+.bline{padding:13px 0;border-bottom:1px solid var(--line-soft)}
+.bline:last-child{border-bottom:0}
+.bline .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.bline .name{font-size:15.5px;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.bline .pay{font-size:17px;font-weight:800;color:var(--red);white-space:nowrap;
+            font-variant-numeric:tabular-nums}
+.bline .src{font-size:12px;color:var(--ink-mute);margin-top:2px}
+.bline .bar{display:flex;height:7px;border-radius:99px;overflow:hidden;
+            background:var(--line-soft);margin:8px 0 7px}
+.bline .why{font-size:12.5px;color:var(--ink-soft);line-height:1.45}
+.tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.05em;
+     text-transform:uppercase;border-radius:5px;padding:3px 7px;margin-right:7px}
+.tag.limit{background:var(--amber-bg);color:var(--amber)}
+.tag.excl{background:var(--red-bg);color:var(--red-ink)}
+details.covered{margin-top:4px}
+details.covered summary{cursor:pointer;font-size:14px;color:var(--ink-soft);
+  padding:11px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}
+details.covered summary::-webkit-details-marker{display:none}
+details.covered summary b{color:var(--teal-ink);font-variant-numeric:tabular-nums}
+details.covered[open] summary{border-bottom:1px solid var(--line-soft)}
+.covrow{display:flex;justify-content:space-between;gap:12px;padding:8px 0;
+        font-size:14px;color:var(--ink-soft);border-bottom:1px solid var(--line-soft)}
+.covrow:last-child{border-bottom:0}
+.covrow b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* ---- money ------------------------------------------------------------ */
+.owe{border-top:1px solid var(--line);margin-top:6px;padding-top:14px}
+.owe .k{font-size:16px;font-weight:800;color:var(--ink)}
+.owe .v{font-size:26px;font-weight:800;color:var(--red);letter-spacing:-.01em}
+
+/* ---- timeline --------------------------------------------------------- */
+.tl{position:relative;margin-left:6px;padding-left:22px;border-left:2px solid var(--line)}
+.ev{position:relative;padding-bottom:18px}
+.ev:last-child{padding-bottom:0}
+.ev::before{content:"";position:absolute;left:-29px;top:4px;width:12px;height:12px;
+            border-radius:50%;background:var(--line);border:2px solid var(--card)}
+.ev.on::before{background:var(--teal)}
+.ev.alert::before{background:var(--red);box-shadow:0 0 0 4px var(--red-bg)}
+.ev .t{font-size:11.5px;color:var(--ink-mute);font-weight:700}
+.ev .d{font-size:14.5px;margin-top:2px;line-height:1.45}
+.ev .a{font-size:11.5px;color:var(--ink-mute);margin-top:3px}
+.ev.alert{background:var(--red-bg);margin-left:-10px;padding:8px 10px 12px;
+          border-radius:var(--r-sm)}
+.hash{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+      color:var(--ink-mute);background:var(--card-low);padding:2px 6px;border-radius:4px}
+
+/* ---- observations ----------------------------------------------------- */
+.obs{display:flex;justify-content:space-between;align-items:center;gap:12px;
+     padding:11px 0;border-bottom:1px solid var(--line-soft)}
+.obs:last-of-type{border-bottom:0}
+.obs .n{font-size:15px;font-weight:700}
+.obs .v{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800}
+.obs .u{color:var(--ink-mute);font-weight:400;font-size:13px}
+.delta{display:flex;gap:8px;margin-top:12px;padding-top:12px;
+       border-top:1px solid var(--line-soft);font-size:13px;line-height:1.5}
+.delta.base{color:var(--teal-ink)}
+.delta.new{color:var(--amber)}
+.delta .ic{flex:none;font-weight:800}
+/* One line per analyte. A single run-on paragraph buried the one reading that
+   moved, which is the thing the materiality band exists to surface. */
+.deltas{margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.dline{display:flex;gap:8px;font-size:12.5px;line-height:1.5;padding:4px 0;
+       color:var(--ink-mute)}
+.dline .ic{flex:none;font-weight:800}
+.dline.base{color:var(--teal-ink)}
+.dline.new{color:var(--amber);font-weight:700;font-size:13.5px;
+           background:var(--amber-bg);margin:4px -8px;padding:8px;border-radius:var(--r-sm)}
+
+/* ---- code / cta ------------------------------------------------------- */
+pre{background:#10202e;border:0;border-radius:var(--r);color:#d6e6f2;
+    padding:13px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12.5px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.btn{min-height:46px;border:0;border-radius:var(--r);padding:12px 18px;font-family:inherit;
+     font-size:14.5px;font-weight:800;cursor:pointer;background:var(--teal);color:#fff}
+.btn.ghost{background:var(--card);color:var(--teal-ink);border:2px solid var(--teal-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+@media(max-width:719px){.btns .btn{flex:1 1 100%}}
+input{width:100%;min-height:46px;background:var(--card);border:1px solid var(--line);
+      border-radius:var(--r);padding:11px 12px;font-family:inherit;font-size:15px;color:var(--ink)}
+input:focus{outline:0;border:2px solid var(--teal);padding:10px 11px}
+.mute{color:var(--ink-mute);font-size:13.5px;line-height:1.55}
+/* A prescription line is a schedule, not a sentence. "1 - 0 - 0 after
+   breakfast 30 days" is three doses, a food rule and a duration, printed as
+   one string because that is how the paper prints it. Shown as what it is:
+   three slots, then the qualifiers. */
+.meds{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.meds-head{display:flex;justify-content:space-between;align-items:baseline;
+  gap:12px;margin-bottom:4px}
+.meds-head h3{font-size:12px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0}
+.meds-head .count{font-size:12.5px;color:var(--ink-mute)}
+.meds-legend{font-size:12px;color:var(--ink-mute);margin:0 0 10px}
+.med{display:grid;grid-template-columns:1fr auto;align-items:baseline;
+  gap:6px 14px;padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.med:last-child{border-bottom:0;padding-bottom:2px}
+.med .mname{font-size:15.5px;font-weight:700;display:flex;align-items:center;
+  gap:8px;flex-wrap:wrap;min-width:0}
+.med .form{font-size:10.5px;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-mute);background:var(--slate-bg);
+  padding:2px 6px;border-radius:var(--r-sm);flex:0 0 auto}
+.med .dose{font-size:15.5px;font-weight:800;text-align:right;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.med .when{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.slots{display:inline-flex;gap:4px}
+.slot{min-width:26px;height:22px;border-radius:var(--r-sm);
+  background:var(--line-soft);border:1px solid var(--line);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:var(--ink-mute);
+  font-variant-numeric:tabular-nums}
+.slot.on{background:var(--teal-bg);border-color:var(--teal);color:var(--teal-ink)}
+.dxlist{display:flex;flex-direction:column}
+.dxrow{display:flex;gap:14px;align-items:flex-start;padding:12px 0;
+       border-bottom:1px solid var(--line)}
+.dxrow:last-child{border-bottom:0;padding-bottom:0}
+.dxrow:first-child{padding-top:0}
+.dxnum{flex:0 0 62px;font-weight:800;font-size:20px;line-height:1.1;
+       color:var(--ink);text-align:right}
+.dxnum span{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;
+            text-transform:uppercase;color:var(--ink-soft);margin-top:2px}
+.dxbody{flex:1;min-width:0}
+.dxname{font-weight:600;font-size:15px;line-height:1.35;overflow-wrap:anywhere}
+.chip{font-size:12.5px;color:var(--ink-soft);background:var(--slate-bg);
+  padding:3px 9px;border-radius:999px;white-space:nowrap}
+.chip.warn{background:var(--amber-bg);color:var(--amber)}
+/* The source line, kept openable but no longer a full-weight green button
+   competing with the content it is a footnote to. */
+.paper{display:inline-flex;align-items:center;gap:7px;background:none;border:0;
+  padding:6px 0;margin-top:10px;font-family:inherit;font-size:13.5px;
+  font-weight:700;color:var(--teal-ink);cursor:pointer;text-decoration:underline;
+  text-underline-offset:3px;text-decoration-thickness:1.5px}
+.paper:hover{color:var(--teal)}
+/* A refusal is the centrepiece, not an error tucked at the bottom. It is the
+   moment the system declines to spend somebody's money and says exactly why,
+   which is the only reason to trust it with the times it does not decline. */
+.refusal{border:2px solid var(--amber);background:var(--amber-bg);
+  border-radius:var(--r-lg);padding:16px;margin-bottom:12px}
+.refusal .head{display:flex;justify-content:space-between;align-items:baseline;
+  gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.refusal .amt{font-size:26px;font-weight:800;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:var(--amber)}
+.refusal .why{font-size:14.5px;line-height:1.6;color:var(--ink)}
+.refusal .named{display:inline-block;font-size:11px;font-weight:800;
+  letter-spacing:.05em;text-transform:uppercase;background:var(--amber);
+  color:#fff;padding:3px 8px;border-radius:var(--r-sm);margin-bottom:8px}
+.cleared{border-left:3px solid var(--teal);background:var(--teal-bg);
+  border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+.guards{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.guard{font-size:11px;font-weight:700;background:var(--card);color:var(--teal-ink);
+  border:1px solid var(--teal);padding:2px 7px;border-radius:999px}
+.split2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.split2{grid-template-columns:1fr}}
+.moneybox{background:var(--card-low);border-radius:var(--r);padding:14px}
+.moneybox .k{font-size:11.5px;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-soft)}
+.moneybox .v{font-size:24px;font-weight:800;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;margin-top:4px}
+.big{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1}
+
+/* ---- nav -------------------------------------------------------------- */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);
+    border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.nav-in{max-width:760px;margin:0 auto;display:flex}
+nav button{flex:1;min-height:56px;background:none;border:0;cursor:pointer;font-family:inherit;
+           display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+           color:var(--ink-mute);font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:6px 2px}
+nav button .g{width:26px;height:22px;border-radius:999px;display:grid;place-items:center;
+              font-size:13px;font-weight:800;transition:background .15s}
+nav button.on{color:var(--teal-ink)}
+nav button.on .g{background:var(--teal-bg);color:var(--teal-ink)}
+
+@media(min-width:720px){
+  body{padding-bottom:0}
+  nav{position:sticky;top:61px;bottom:auto;border-top:0;border-bottom:1px solid var(--line)}
+  nav button{min-height:50px;flex-direction:row;gap:7px;font-size:13px}
+  main{padding:22px var(--pad) 48px}
+  .sev b{font-size:44px}
+}
+
+/* ---- hybrid AI controls ----------------------------------------------- */
+.hyb-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  flex-wrap:wrap;margin-bottom:10px}
+.hyb-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;
+  padding:4px 10px;font-size:11.5px;font-weight:800;letter-spacing:.02em}
+.hyb-badge.nano{background:var(--teal-bg);color:var(--teal-ink);border:1px solid var(--teal)}
+.hyb-badge.cloud{background:var(--violet-bg);color:var(--violet);border:1px solid var(--violet)}
+.hyb-badge.warn{background:var(--amber-bg);color:#7c4400;border:1px solid #9e5700}
+.hyb-badge.slate{background:var(--slate-bg);color:var(--ink-soft);border:1px solid var(--line)}
+textarea.hyb-ta{width:100%;min-height:84px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r);padding:11px 12px;font-family:inherit;font-size:15px;color:var(--ink);
+  resize:vertical;line-height:1.5}
+textarea.hyb-ta:focus{outline:0;border:2px solid var(--teal);padding:10px 11px}
+.hyb-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hyb-chipbtn{background:var(--slate-bg);border:1px solid var(--line);border-radius:999px;
+  padding:5px 10px;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink-soft);
+  cursor:pointer;text-align:left}
+.hyb-chipbtn:hover{border-color:var(--teal);color:var(--teal-ink)}
+.hyb-out{margin-top:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);font-size:14px;line-height:1.6}
+.hyb-file{display:block;width:100%;padding:10px;border:1px dashed var(--line);
+  border-radius:var(--r);background:var(--surface);font-family:inherit;font-size:13.5px}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand">
+      <div class="mark">K</div>
+      <div>
+        <h1>KinGuard</h1>
+        <div class="sub" id="sub">no case open</div>
+      </div>
+    </div>
+    <div class="bar-end">
+      <span id="hyb-hdr"></span>
+      <span class="pill p-slate" id="stamp">snapshot</span>
+      <div class="acct" id="acct"></div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-in">
+    <button data-v="now" class="on"><span class="g">◎</span>Now</button>
+    <button data-v="brief"><span class="g">✈</span>Arrival</button>
+    <button data-v="routing"><span class="g">⛨</span>Routing</button>
+    <button data-v="record"><span class="g">⚕</span>Record</button>
+    <button data-v="claim"><span class="g">₹</span>Claim</button>
+    <button data-v="audit"><span class="g">✓</span>Audit</button>
+  </div>
+</nav>
+
+<main id="app"></main>
+<script>
+const API = location.origin;
+const S = { caseId:null, parentId:null, token:null, trail:null, brief:null,
+            record:null, verify:null, wellbeing:null, careCircle:null, recovery:null, dx:null,
+            linkToken:null, bills:null,
+            who:null, authConfig:null, authError:null, pay:null, payBusy:null,
+            signInFor:null, payNote:null, payNoteOk:false,
+            hospitals:null,
+            intakeOpen:false,
+            hybrid:{
+              ready:false, configured:false, nanoStatus:"checking", reason:"Initialising…",
+              lastSource:null, model:null, cloudModel:"gemini-2.5-flash",
+              intakeText:"", intakeBusy:false, intakeNorm:null, intakeErr:null, intakeSubmitted:null,
+              explainBusy:false, explainOut:null, explainErr:null, explainScope:null,
+              explainLang:"en", explainSource:null,
+              uploadBusy:false, uploadMsg:null, uploadOk:false, uploadPrecheck:null,
+            },
+            notified:null, view:"now" };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// Shown once, on the first screen a person lands on. Repeating it on every
+// tab trains the eye to skip it, which is worse than saying it plainly once.
+const SYNTH_BANNER = "";
+let SYNTH_SHOWN = false;
+function synthOnce(){
+  if(SYNTH_SHOWN) return "";
+  SYNTH_SHOWN = true;
+  return SYNTH_BANNER;
+}
+// Every view still calls for it; only the first one to render gets it.
+const SYNTH = "";
+const DOC_LABEL = {blood_report:"Lab report", prescription:"Prescription",
+                   discharge_summary:"Discharge summary", policy:"Policy schedule"};
+const title = (h, p) => `<div class="title"><h1>${esc(h)}</h1><p>${esc(p)}</p></div>`;
+
+async function api(path, {auth=false} = {}) {
+  const headers = auth && S.token ? { Authorization:`Bearer ${S.token}` } : {};
+  // A signed link stands in for a session. Both ids ride along because a
+  // parent-scoped path has no case in it for the server to check against.
+  if (auth && !S.token && S.linkToken && S.caseId) {
+    const sep = path.includes("?") ? "&" : "?";
+    path = `${path}${sep}t=${encodeURIComponent(S.linkToken)}&case=${encodeURIComponent(S.caseId)}`;
+  }
+  const r = await fetch(API + path, { headers });
+  if (r.status === 401 || r.status === 403) {
+    const detail = (await r.json()).detail;
+    // A Google ID token expires in about an hour. Silently rendering "denied"
+    // to someone who signed in ten minutes ago reads as a broken page, so the
+    // session is dropped and the gate comes back with a reason.
+    if (r.status === 401 && S.token && S.token.split(".").length === 3) {
+      S.token = null; S.who = null;
+      S.authError = "That sign-in expired. Sign in again to reopen the record.";
+    }
+    return { __denied:true, detail };
+  }
+  if (!r.ok) return { __error:`HTTP ${r.status}` };
+  return r.json();
+}
+
+/* Degraded states are states, never spinners and never a fake zero. */
+const unknown = why => `<span class="unk">not yet known${why?`<span class="why2">${esc(why)}</span>`:""}</span>`;
+const row = (k,v,cls="") => `<div class="row ${cls}"><div class="k">${esc(k)}</div><div class="v">${v}</div></div>`;
+const kinds = k => (S.trail?.receipts||[]).filter(r=>r.kind===k);
+const last  = k => { const a=kinds(k); return a.length?a[a.length-1]:null; };
+
+function hospitalName(t){
+  const id=t.payload.recommended_hospital_id;
+  const h=(t.payload.ranked||[]).find(x=>x.hospital_id===id);
+  return h?h.name:(id||"not known");
+}
+// What each message was ABOUT, rather than how it travelled.
+//
+// Every comms.sent line read "Family message accepted by WhatsApp for delivery
+// (sandbox, real delivery to opted-in test numbers; acceptance, not handset
+// receipt)" - eighteen words of transport caveat, repeated nine times down one
+// screen, never once saying what was sent. The caveat is true and it belongs
+// once, under the timeline, not on every row.
+const SENT = {
+  urgent_family_alert: "The family was told, urgently, what she reported and where she is being sent.",
+  care_circle_notice: "The care circle was told where she was taken.",
+  care_circle_unclear: "The care circle was told a message arrived that could not be made out.",
+  clinician_handoff_link: "A write-scoped link and a QR went to the people who are with her, for the treating team.",
+  clinician_note_left: "The family was told the treating team had left an update.",
+  clinician_note_text: "The treating team's update was sent to the family, in their language.",
+  diagnostic_options_ready: "The family was told where the ordered test can be done.",
+  diagnostic_options_none: "The family was told nowhere nearby could be found for the ordered test.",
+  booking_code_needed: "The person with her was asked for the one-time code the centre had just texted.",
+  booking_done: "The family was told the appointment, with the address and the number to cancel.",
+  bill_recorded: "The family was told what the bill says and what it changes.",
+  payment_settled: "The family was told the payment settled.",
+  payment_failed: "The family was told the payment did NOT go through.",
+  payment_amount_mismatch: "The family was told the rail reported a different amount.",
+  payment_auto_initiated: "The family was told a bill had been paid inside the limits they set.",
+  payment_escalated: "The family was told a bill was refused and needs them.",
+  recovery_check_in: "A recovery check-in went to her, in her language.",
+  status_update: "A status update went to the family.",
+  admission_alert: "The family was told she had been admitted.",
+  claim_stage: "The family was told the claim had moved.",
+  billing_summary: "The family was told what the stay has come to.",
+  doctor_assigned: "The family was told who is looking after her.",
+  document_recorded: "The family was told a document had been read onto her record.",
+};
+
+function describe(r){
+  const p=r.payload||{};
+  const n=(x)=>Number(x||0).toLocaleString("en-IN");
+  switch(r.kind){
+    case "case.opened": return "Case opened.";
+    case "intake.signal_received": return "Intake signal received from an external channel.";
+    case "intake.hybrid_normalized": return `Client-side Firebase AI Logic normalized ${n(p.symptom_count)} symptom phrase(s) ${p.inference_source==="on_device"?"on-device via Gemini Nano":"via Cloud Fallback"} (advisory only; deterministic rules decided severity).`;
+    case "triage.decision": return `Triage assessed severity ${p.severity}.`;
+
+    case "comms.sent": return (SENT[p.template_name] || "A message went to the family.")
+      + (p.translated ? ` Sent in ${p.rendered_language==="ta"?"Tamil":p.rendered_language}, translated from the recorded ${p.translated_from}.` : "");
+    case "comms.not_delivered": return "Message permitted by the gate, but no transport was configured, so nothing was sent.";
+    case "comms.blocked": return "Message blocked before sending. Clinical detail may not go over WhatsApp.";
+
+    case "voice.placed": return "A call was placed. Whether anybody answered is not known here.";
+    case "voice.not_placed": return "No call was placed: no voice transport is configured. The message that went with it is real; the call is not.";
+
+    case "recovery.window_opened": return `Recovery check-ins began. ${p.days} days from ${p.starts_on}, counted from `
+      + (p.starts_on_source==="document" ? "the discharge date on the document." : "when the document was recorded. No discharge date could be read, and none was inferred.");
+    case "recovery.prompt_sent": return `Recovery check-in sent, day ${p.day} of ${p.of_days}. It asks how she is; it gives no advice and names no medicine.`;
+    case "recovery.prompt_not_delivered": return `Recovery check-in for day ${p.day} was permitted but no transport accepted it, so nothing reached her.`;
+    case "recovery.stopped": return `Recovery check-ins stopped: ${p.reason}. ${p.detail||""}`;
+
+    case "wellbeing.recorded": return p.phase==="recovery"
+      ? "Recovery check-in recorded. Self-reported, not a clinical assessment."
+      : "Check-in recorded. Self-reported, not a clinical assessment.";
+    case "wellbeing.unclear": return "A message arrived that could not be made out. Nothing was guessed at.";
+    case "wellbeing.escalated": return (p.phase==="recovery"
+      ? "A recovery check-in answer matched the deterministic severity table"
+      : "A check-in matched the deterministic severity table")
+      + ` at ${p.severity}. That is a routing decision, not a clinical assessment.`;
+
+    case "emergency.access": return "Somebody holding the shared link opened her summary. KinGuard cannot verify who they are and does not claim to.";
+    case "clinician.channel_bound": return "A handset connected itself as the treating team, by holding a link the family issued. That proves the credential, not the person.";
+    case "clinician.channel_ended": return "That handset disconnected. Nothing further from it is recorded against this case.";
+    case "clinician.note": return "The treating team left an update. The words are kept behind the credential; only their hash is on this chain.";
+
+    case "diagnostic.referral": return `${n(p.option_count)} place${p.option_count===1?"":"s"} the ordered test could be done were found. None of them was contacted.`;
+
+    case "document.ingested": return "A photographed document was read onto her record.";
+    case "bill.ingested": return "A bill was photographed and read.";
+
+    case "mandate.standing_granted": return `The family authorised automatic payment ahead of any admission: at most INR ${n(p.per_bill_cap_inr)} a bill, INR ${n(p.total_cap_inr)} in total.`;
+    case "mandate.standing_applied": return "NOBODY AUTHORISED ANYTHING FOR THIS ADMISSION. The standing payment authority granted earlier was applied to it, and the total is shared with every other admission it covers.";
+    case "mandate.standing_revoked": return "Standing payment authority withdrawn. Admissions already carrying it stop paying automatically too.";
+    case "mandate.granted": return `The family authorised automatic payment on this admission: at most INR ${n(p.per_bill_cap_inr)} a bill, INR ${n(p.total_cap_inr)} in total.`;
+    case "mandate.revoked": return "Automatic payment stopped. Every further bill escalates for explicit approval.";
+
+    case "payment.auto_initiated": return `INR ${n(p.amount_inr)} sent automatically, inside the limits the family set. Not settled until the rail says so.`;
+    case "payment.confirmed": return `The rail confirmed INR ${n(p.amount_inr)} settled. This receipt is never written by the code that initiates a payment.`;
+    case "payment.failed": return `INR ${n(p.amount_inr)} did NOT go through. Nothing was retried automatically.`;
+    case "payment.partial": return `The rail reported INR ${n(p.received_inr)} against a bill for INR ${n(p.expected_inr)}. That is not a settlement.`;
+    case "payment.escalated": return `A payment was refused by the ${p.failed_check||"guards"} check and needs a person. ${p.reason||""}`;
+
+    case "booking.standing_granted": return `The family authorised KinGuard to hold an appointment: within ${p.max_distance_km} km, ${p.max_attempts} centres tried at most. No authority to spend.`;
+    case "booking.standing_applied": return "NOBODY AUTHORISED ANYTHING FOR THIS ADMISSION. The standing booking authority granted earlier was applied to it. It still carries no authority to spend.";
+    case "booking.standing_revoked": return "Booking authority withdrawn. A test a clinician orders is surfaced for a person to arrange.";
+    case "booking.revoked": return "Booking stopped for this admission. Options are still surfaced; nothing is arranged.";
+    case "booking.attempted": return "An attempt to hold an appointment started. Recorded before it ran, so a crash cannot hide it and a retry cannot double-book.";
+    case "booking.requested": return `An appointment was REQUESTED and the centre has not confirmed it. ${n(p.attempts_before_this)} other centre${p.attempts_before_this===1?"":"s"} were tried first.`;
+    case "booking.confirmed": return "The centre confirmed the appointment. KinGuard did not decide she needs this test and did not pay for it.";
+    case "booking.escalated": return `Nothing could be arranged after ${n(p.attempt_count)} centre${p.attempt_count===1?"":"s"}. A person needs to ring, and each one is listed with what stopped it.`;
+    case "booking.cancelled": return "The appointment was withdrawn on this record. The centre is told by whoever rings them; KinGuard has not contacted them.";
+    case "booking.resulted": return `A lab report arrived while this was the only test outstanding, so it is recorded as carried out${p.collected_on?`, dated ${p.collected_on}`:""}. That is evidence she was seen, not the centre confirming a slot, and no value in the report was read to decide it.`;
+    case "booking.result_not_attributed": return `A lab report arrived with ${n((p.open_appointments||[]).length)} tests outstanding, so which one it belongs to is not something this system can establish. Nothing was closed, and a person can attribute it.`;
+    case "booking.otp_requested": return "The centre texted a one-time code to a phone, and the person with her was asked for it. The code itself is never recorded.";
+    case "booking.otp_closed": return `The code request was closed (${p.outcome||"done"}) and cannot be answered again.`;
+
+    case "claim.filed_on_discharge": return `The discharge summary arrived and the reimbursement claim was assembled and submitted on its own, for ${p.total_claimed_inr?`INR ${Number(p.total_claimed_inr).toLocaleString("en-IN")}`:"the amounts billed"}. The counterparty is a SIMULATED adjudicator; the thirty-day clock is real. A Part A claim form was filled from the record and is unsigned - KinGuard has not sent it to anyone.`;
+    case "claim.not_filed": return `A discharge summary arrived and no claim was filed: ${esc(p.detail||p.reason||"the lane declined")}. Recorded so a case with no claim on it is a decision rather than a gap.`;
+    case "claim.packet_assembled": return "Claim packet assembled.";
+    case "evidence.assessed": return `Evidence assessed: ${p.gate}.`;
+    case "evidence.enriched": return "Evidence enriched before submission.";
+    case "claim.submitted": return "Claim submitted to the SIMULATED insurer endpoint.";
+    case "claim.adjudicated": return `SIMULATED adjudication returned ${p.outcome}.`;
+    case "claim.query_answered": return "A counterparty query was answered.";
+    case "claim.stage_changed": return `Claim stage moved ${p.from} → ${p.to}.`;
+
+    case "pre_auth.requested": return `Cashless pre-authorisation requested from the SIMULATED insurer endpoint. The decision is owed by ${p.decision_due_at||"the 1-hour deadline"}.`;
+    case "pre_auth.authorized": return `SIMULATED pre-authorisation: ${p.outcome==="authorized_with_limits"?"authorised with limits":"authorised"}. Provisional cover at admission, not a decision about any bill, and nothing settled.`;
+    case "pre_auth.queried": return "SIMULATED pre-authorisation: the counterparty asked for more before authorising.";
+    case "pre_auth.denied": return "SIMULATED pre-authorisation: refused. The family pays the hospital and claims afterwards.";
+    case "pre_auth.clock_breached": return `The 1-hour authorisation window passed with no decision. It was due at ${p.decision_due_at}, and this was noticed at ${p.observed_at}.`;
+
+    // A kind with no sentence yet is a bug, not a thing to print raw at a
+    // family. Say what little is honestly known and keep the name for the
+    // provenance line underneath, where an identifier belongs.
+    default: return "Something was recorded on this case.";
+  }
+}
+const inr = n => "₹" + Number(n).toLocaleString("en-IN");
+// The brief returns timestamps as ISO strings. Printing 2026-08-20T17:39:40
+// .795665+00:00 verbatim wraps across two lines and reads as a machine dump;
+// format it for a person. Display only — the value is unchanged.
+function human(v){
+  if(typeof v!=="string") return v;
+  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) return v;
+  const d=new Date(v);
+  return isNaN(d) ? v : d.toLocaleString(undefined,
+    {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+}
+// Find when a document of the named kind was stored, so the claim timeline can
+// say when the gap was filled rather than leaving the two tabs to contradict.
+function resolvedAt(kind){
+  if(!kind || !S.record?.documents) return null;
+  const hit=S.record.documents.filter(d=>d.kind===kind)
+              .sort((a,b)=>a.parsed_at<b.parsed_at?-1:1)[0];
+  return hit ? new Date(hit.parsed_at).toLocaleTimeString() : null;
+}
+// A document stored after the case opened arrived mid-episode. Saying so is
+// what stops the Record tab reading as though it had been there all along.
+function arrivedMidEpisode(doc){
+  const opened=(S.trail?.receipts||[])[0]?.created_at;
+  return opened && doc.parsed_at > opened;
+}
+
+/* ===================== views ===================== */
+
+function vNow(){
+  if(!S.trail) return vOpenOrWait();
+  if(S.trail.__denied) return denied(S.trail.detail,"The case timeline");
+  const t=last("triage.decision"), sig=last("intake.signal_received");
+  const sev=t?t.payload.severity:null;
+  return `${synthOnce()}
+  ${title("What is happening now","Every entry below is a signed receipt you can verify yourself.")}
+  <div class="card hero ${sev==="HIGH"?"edge-red":"edge-teal"}">
+    <div class="lbl">Severity assessed</div>
+    ${t?`<div class="sev ${sev==="HIGH"?"":"ok"}"><span class="dot"></span><b>${esc(sev)}</b></div>
+       <div class="why">${esc((t.payload.severity_rationale||[])[0]||"")}</div>
+       <div class="hosp">${esc(hospitalName(t))}</div>
+       <div class="pills">
+         <span class="pill p-teal">${(t.payload.ranked||[]).find(h=>h.hospital_id===t.payload.recommended_hospital_id)?.distance_km ?? "distance not known"} km · cashless network</span>
+       </div>`
+      :`<div class="sev ok"><b>·</b></div><div class="why">${unknown("triage has not run on this case")}</div>`}
+  </div>
+  <div class="card">
+    <div class="hyb-bar" style="margin-bottom:${S.intakeOpen?"12":"0"}px">
+      <div><h2 class="mini" style="margin:0">Report new symptoms (Hybrid AI intake)</h2>
+        <p class="mute" style="margin:2px 0 0;font-size:12.5px">Normalise Tamil, Tanglish, Hindi, or English locally before deterministic triage.</p></div>
+      <button class="btn ghost" style="min-height:38px;padding:7px 14px;font-size:13px" onclick="S.intakeOpen=!S.intakeOpen;render()">
+        ${S.intakeOpen?"Hide":"New intake"}</button>
+    </div>
+    ${S.intakeOpen?vHybridIntakeBody():""}
+  </div>
+  ${sig?`<div class="card edge-teal">
+    <div class="row"><div class="k">Episode began</div>
+      <div class="v">${esc(sig.payload.channel_description||sig.payload.channel)}
+        <span class="why2">${esc(sig.payload.label)}</span></div></div>
+  </div>`:""}
+  <div class="card">
+    <h2>Case timeline</h2>
+    <div class="tl">
+      ${(S.trail.receipts||[]).map(r=>{
+        const alert=r.kind==="comms.blocked";
+        // The TIME, then the sentence, then the provenance. An identifier is
+        // not the headline of an entry a family reads; it is what they can
+        // check the headline against, and it belongs underneath in the quiet.
+        return `<div class="ev ${alert?"alert":"on"}">
+          <div class="t">${esc(new Date(r.created_at).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}))}
+            <span class="mute" style="font-weight:500">${esc(new Date(r.created_at).toLocaleDateString())}</span></div>
+          <div class="d">${esc(describe(r))}</div>
+          <div class="a">${esc(String(r.kind))} · ${esc(r.actor)} · seq ${r.seq}
+            <span class="hash">${esc(r.hash)}</span></div>
+        </div>`;}).join("")}
+    </div>
+    <div class="pills" style="margin-top:14px">
+      <span class="pill ${S.trail.verified?"p-teal":"p-red"}">chain ${S.trail.verified?"verified ✓":"BROKEN"}</span>
+      <span class="pill p-slate">${(S.trail.receipts||[]).length} receipts</span>
+    </div>
+    <p class="mute" style="margin-top:12px;font-size:13px">
+      A message recorded as sent was accepted by WhatsApp for delivery. That is
+      acceptance, not a handset receipt, and this deployment sends through a
+      sandbox that only reaches opted-in numbers. Said once here rather than on
+      every line it applies to.</p>
+  </div>`;
+}
+
+function vBrief(){
+  if(!S.brief) return vOpenOrWait();
+  if(S.brief.__denied) return denied(S.brief.detail,"The arrival brief");
+  const b=S.brief.brief;
+  // Prose gets a stacked row; short facts keep the label/value pairing.
+  // Notified parties, never "providers". Nobody here is integrated with
+  // anything, and the wording must not imply a loop back.
+  function careCircle(){
+    const c = S.careCircle;
+    if(!c || !c.contacts) return "";
+    if(!c.contacts.length){
+      return `<div class="card"><h2>Care circle</h2>
+        <p class="mute">${unknown("nobody has consented to be notified yet")}</p></div>`;
+    }
+    const last = S.notified || {};
+    const state = n => {
+      const r = (last.results||[]).find(x=>x.to_e164===n);
+      if(!r) return `<span class="pill">not notified on this case</span>`;
+      if(!r.consented) return `<span class="pill p-amber">no consent, nothing sent</span>`;
+      if(r.delivered) return `<span class="pill p-green">notified</span>`;
+      return `<span class="pill p-red">not delivered</span>`;
+    };
+    return `<div class="card"><h2>Care circle</h2>
+      <div class="pills" style="margin-bottom:12px">
+        <span class="pill p-amber">NOTIFIED PARTIES, NOT INTEGRATED PROVIDERS</span></div>
+      ${c.contacts.map(x=>`
+        <div class="row">
+          <div class="k">${esc(x.name)} · ${esc(x.relationship)}</div>
+          <div class="v">${state(x.to_e164)}</div>
+        </div>`).join("")}
+      <p class="mute" style="margin-top:12px">
+        KinGuard notifies these people. It does not integrate with any hospital or
+        clinician, and nobody here can reply into the system.</p></div>`;
+  }
+
+  // Check-ins are quoted, never summarised. Paraphrasing a self-report is the
+  // first step towards presenting it as an assessment.
+  function checkIns(){
+    const e = S.wellbeing;
+    if(!e) return "";
+    if(!e.entries || !e.entries.length){
+      return `<div class="card"><h2>Check-ins</h2>
+        <p class="mute">${unknown("no check-in yet")}</p>
+        <p class="mute">A missing check-in is not evidence that anything is well.</p></div>`;
+    }
+    return `<div class="card"><h2>Check-ins</h2>
+      <div class="pills" style="margin-bottom:12px">
+        <span class="pill p-amber">SELF-REPORTED, NOT A MEASURED VITAL</span></div>
+      ${e.entries.slice(0,8).map(x=>`
+        <div class="row stack">
+          <div class="k">${esc(new Date(x.received_at).toLocaleString())} · ${esc(x.source)}${
+            x.phase==="recovery" ? ' · <span class="pill p-slate">RECOVERY</span>' : ""}</div>
+          <div class="v">&ldquo;${esc(x.text)}&rdquo;</div>
+        </div>`).join("")}
+      <p class="mute" style="margin-top:12px">${esc(e.label)}</p></div>`;
+  }
+
+  // The fortnight after discharge, shown as a window with an end date rather
+  // than as an open-ended "monitoring" claim. KinGuard does not monitor.
+  function recovery(){
+    const r = S.recovery;
+    if(!r || !(r.windows||[]).length) return "";
+    const w = r.windows.slice().sort((a,b)=>(a.starts_on<b.starts_on?1:-1))[0];
+    const openNow = w.status === "open";
+    return `<div class="card"><h2>Recovery check-ins</h2>
+      <div class="pills" style="margin-bottom:12px">
+        <span class="pill ${openNow?"p-slate":"p-amber"}">${openNow?"RUNNING":"ENDED"}</span>
+        <span class="pill p-amber">ASKS AND RECORDS &middot; NEVER ADVISES</span></div>
+      ${row("Started", esc(w.starts_on) + (w.starts_on_source==="document"
+          ? " (the discharge date on the document)"
+          : " (recorded then; no discharge date could be read)"))}
+      ${row("Runs for", `${w.days} days, one message at ${String(w.hour).padStart(2,"0")}:00 ${esc(w.timezone)}`)}
+      ${row("Consent", r.consent_held ? "Held by her, on her own profile" : unknown("not held, so nothing is being sent"))}
+      ${openNow ? "" : row("Stopped", esc(w.stopped_reason||"ended"))}
+      ${row("Answers recorded", String((r.check_ins||[]).length))}
+      <p class="mute" style="margin-top:12px">
+        The window ends by the calendar, not because anything decided she was better.
+        She can reply STOP at any time and it ends on that message. ${esc(r.label)}</p></div>`;
+  }
+
+  const f=x=>row(x.label, x.known?esc(human(x.value)):unknown(x.source?.note),
+                 (x.value||"").length>60 ? "stack" : "");
+  return `${synthOnce()}
+  ${title("Arrival brief","What is waiting when you land, and what is not yet known.")}
+  <div class="strip note"><b>State as of ${esc(b.as_of?new Date(b.as_of).toLocaleString():"no activity recorded")}</b><br>
+    A snapshot of what has been recorded, not a live view. KinGuard does not monitor continuously.</div>
+  ${vHybridExplainCard("brief")}
+  <div class="card"><h2>Where things stand</h2>${(b.facts||[]).map(f).join("")}</div>
+  ${checkIns()}
+  ${recovery()}
+  ${careCircle()}
+  <div class="card"><h2>What has been done</h2>
+    ${(b.actions_taken||[]).length ? `<div class="tl">
+      ${b.actions_taken.map(x=>`<div class="ev on">
+        <div class="t">${esc(x.label)}</div>
+        <div class="d">${x.known?esc(human(x.value)):unknown(x.source?.note)}</div>
+      </div>`).join("")}
+    </div>` : unknown("nothing recorded yet")}
+  </div>
+  <div class="card edge-amber"><h2>Still open</h2>${(b.pending||[]).map(f).join("")}</div>
+  <div class="card"><h2>Bring with you</h2>${(b.bring_with_you||[]).map(f).join("")}</div>
+  <div class="card"><h2>Who to contact</h2>${(b.contacts||[]).map(f).join("")}</div>
+  <div class="card"><h2>Grounding</h2><p class="mute">
+    ${(b.facts||[]).filter(x=>!x.known).length} item(s) not yet known, shown rather than guessed.
+    Every line carries the receipt or stored field it came from.</p></div>`;
+}
+
+function vRouting(){
+  if(!S.trail) return vOpenOrWait();
+  if(S.trail.__denied) return denied(S.trail.detail,"The routing decision");
+  const t=last("triage.decision");
+  if(!t) return `${synthOnce()}<div class="card"><h2>Routing</h2><p>${unknown("triage has not run on this case")}</p></div>`;
+  const p=t.payload;
+  return `${synthOnce()}
+  ${title("Routing rationale","Why this hospital, and what was traded to get there.")}
+  <div class="card edge-teal">
+    <h2>Why this hospital</h2>
+    <p style="font-size:15px;line-height:1.6">${esc(p.explanation)}</p>
+  </div>
+  <div class="card">
+    <h2>Where these hospitals are</h2>
+    <div id="map" style="height:340px;border-radius:12px;background:#eef1f4"></div>
+    <p class="mute" style="margin-top:10px">
+      Locations verified against Google Places. This shows where she is being
+      directed, not where she is: KinGuard has no location from her and does
+      not track anyone.</p>
+  </div>
+  <div class="card"><h2>How each option scored</h2>
+    ${(p.ranked||[]).map(h=>`<div class="row">
+      <div class="k">${esc(h.name)}${h.hospital_id===p.recommended_hospital_id?' <span class="pill p-teal">chosen</span>':""}</div>
+      <div class="v num">${h.total_score.toFixed(3)}
+        <span class="why2">${h.distance_km} km · capability ${h.capability_score} ·
+        ${h.network_match?"in network":"NOT in network"}</span></div></div>`).join("")}
+  </div>
+  <div class="card"><h2>Why that severity</h2>
+    ${(p.severity_rationale||[]).map(r=>`<div class="row"><div class="v long">${esc(r)}</div></div>`).join("")}
+  </div>`;
+}
+
+// The clinician handoff. Lives on the Record tab because that is where the
+// clinical content already is — the link shares a view of THIS, so the control
+// belongs beside the thing it shares rather than in a settings screen.
+function vHandoff(){
+  const h = S.handoff;
+  if(h?.__working) return `<div class="card"><h2 class="mini">Share with the treating team</h2>
+    <p class="mute">Minting a link…</p></div>`;
+
+  if(h?.__error) return `<div class="card edge-amber"><h2 class="mini">Share with the treating team</h2>
+    <p>${esc(h.__error)}</p>
+    <div class="btns" style="margin-top:12px">
+      <button class="btn" onclick="mintHandoff()">Try again</button></div></div>`;
+
+  if(h?.__sent) return `<div class="card edge-teal">
+    <h2 class="mini">Sent to the treating team</h2>
+    ${(h.recipients||[]).map(r=>`<div class="row"><div class="k">${esc(r.name)}</div>
+      <div class="v">${r.delivered?"delivered"
+        : r.allowed===false ? "blocked" : r.consented===false ? "no consent" : "not delivered"}
+        <span class="why2">${esc(r.detail||"")}</span></div></div>`).join("")}
+    <p class="mute" style="margin-top:10px">The message carries a link, never a finding.
+      It expires in ${Math.round((h.expires_in_seconds||3600)/60)} minutes, and every time it is
+      opened a receipt is written to this case.</p>
+    <div class="btns" style="margin-top:12px">
+      <button class="btn" onclick="mintHandoff()">Show a QR too</button>
+      <button class="btn" onclick="revokeHandoff()">Stop sharing</button></div>
+  </div>`;
+
+  if(h?.url) return `<div class="card edge-teal">
+    <h2 class="mini">Share with the treating team</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:none;background:#fff;padding:8px;border:1px solid var(--line);
+                  border-radius:10px;line-height:0">${h.qr_svg||""}</div>
+      <div style="flex:1;min-width:200px">
+        <p class="mute" style="margin-bottom:8px">Let the nurse scan this, or send them the link.
+          It opens the emergency summary and nothing else.</p>
+        <div class="row stack"><div class="k">Expires</div>
+          <div class="v">${Math.round((h.expires_in_seconds||3600)/60)} minutes from now</div></div>
+        <div class="row stack"><div class="k">Grants</div><div class="v">${esc(h.grants||"")}</div></div>
+        <div class="btns" style="margin-top:12px">
+          <button class="btn" onclick="copyHandoff()">Copy link</button>
+          <button class="btn" onclick="revokeHandoff()">Stop sharing</button></div>
+      </div>
+    </div>
+    <p class="mute" style="margin-top:12px">Anyone holding this link can read the summary until it
+      expires. Every time it is opened, a receipt is written to this case. You will see it on the
+      audit trail. It does not identify who opened it, because a link cannot.</p>
+  </div>`;
+
+  const blurb = `<p class="mute">If she is admitted and you are not there, the receiving nurse can be
+      given a read-only view of her allergies, conditions, medication and recent results. No login,
+      expires in an hour, and you can stop it at any time.</p>`;
+
+  // Reading the record and DISCLOSING it to a third party are different acts.
+  // A dashboard link can be forwarded, so it opens the record it was minted
+  // for and stops there — it cannot mint further credentials for anyone else.
+  // The buttons used to be offered anyway and answered with a raw 401.
+  if(!S.token) return `<div class="card">
+    <h2 class="mini">Share with the treating team</h2>
+    ${blurb}
+    <p class="mute" style="margin-top:10px">Sharing with a clinician creates a new link for someone
+      else to hold, so it needs a signed-in family session rather than the link that opened this
+      page.</p>
+    ${S.signInFor?signInPanel(S.signInFor):`<div class="btns" style="margin-top:12px">
+      <button class="btn" onclick="askSignIn('Sharing with a clinician creates a link for someone else to hold.')">
+        Sign in to share</button></div>`}
+  </div>`;
+
+  return `<div class="card">
+    <h2 class="mini">Share with the treating team</h2>
+    ${blurb}
+    <div class="btns" style="margin-top:12px">
+      <button class="btn" onclick="sendHandoff(false)">Send it to my WhatsApp</button>
+      <button class="btn" onclick="sendHandoff(true)">Send to the care circle</button>
+      <button class="btn" onclick="mintHandoff()">Show a QR instead</button></div>
+  </div>`;
+}
+
+// The realistic path. A QR assumes someone is holding a laptop next to the
+// nurse; in the situation this exists for the family is asleep eleven time
+// zones away, so the link goes to the phone they already have.
+async function sendHandoff(toCareCircle){
+  S.handoff = {__working:true}; render();
+  try{
+    const q = toCareCircle ? "?to_care_circle=true" : "";
+    const r = await fetch(API + `/api/cases/${encodeURIComponent(S.caseId)}/handoff-link/send${q}`,
+      {method:"POST", headers:{Authorization:`Bearer ${S.token}`}});
+    const body = await r.json();
+    S.handoff = r.ok ? {...body, __sent:true} : {__error: body.detail || `HTTP ${r.status}`};
+  }catch(e){ S.handoff = {__error:String(e)}; }
+  render();
+}
+
+async function mintHandoff(){
+  S.handoff = {__working:true}; render();
+  try{
+    const r = await fetch(API + `/api/cases/${encodeURIComponent(S.caseId)}/handoff-link`,
+      {method:"POST", headers:{Authorization:`Bearer ${S.token}`}});
+    const body = await r.json();
+    S.handoff = r.ok ? body : {__error: body.detail || `HTTP ${r.status}`};
+  }catch(e){ S.handoff = {__error:String(e)}; }
+  render();
+}
+
+async function revokeHandoff(){
+  try{
+    await fetch(API + `/api/cases/${encodeURIComponent(S.caseId)}/handoff-link/revoke`,
+      {method:"POST", headers:{Authorization:`Bearer ${S.token}`}});
+  }catch(e){ /* the link dies on expiry regardless */ }
+  S.handoff = null; render();
+}
+
+function copyHandoff(){
+  if(!S.handoff?.url) return;
+  const full = location.origin + S.handoff.url;
+  navigator.clipboard?.writeText(full);
+}
+
+// A clinician ordered a test, and KinGuard looked up where it could be done.
+// The WhatsApp message links here and does not name the test, because the
+// classifier refuses test names over WhatsApp as clinical detail. So this is
+// the only surface the name appears on, and it sits behind the credential.
+// What the treating team said. This is the only surface it appears on: the
+// chain keeps the hash, and the WhatsApp message says an update exists without
+// repeating it, because a status update is clinical detail about her.
+function vClinicianNotes(){
+  const notes=(S.dx&&S.dx.notes)||[];
+  if(!notes.length) return "";
+  return `<div class="sec">What the treating team said</div>
+  ${notes.slice().reverse().map(n=>{
+    const when=new Date(n.recorded_at);
+    // Where the clinician spoke another language, the English leads and their
+    // own words sit under it. The dictation is the record; the English is
+    // derived from it and is labelled that way.
+    const en = n.text_en;
+    return `<div class="card">
+      <p style="margin:0 0 ${en?"6":"10"}px">${esc(en || n.text)}</p>
+      ${en?`<p class="mute" style="margin:0 0 4px;font-size:14px">${esc(n.text)}</p>
+        <p class="mute" style="margin:0 0 10px;font-size:12.5px">
+          The clinician said this; the English above is translated from it.</p>`:""}
+      <p class="mute" style="margin:0;font-size:13px">
+        ${esc(n.recorded_by||"the treating team")} ·
+        ${esc(when.toLocaleDateString())}
+        ${esc(when.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}))}
+        ${n.via_voice?" · spoken":" · typed"}</p>
+      <p class="mute" style="margin:6px 0 0;font-size:12.5px">
+        KinGuard cannot verify who left this and does not claim to. It did not
+        re-triage the case or change any coverage figure.</p>
+    </div>`;
+  }).join("")}`;
+}
+
+function vDiagnostics(){
+  const orders=(S.dx&&S.dx.orders)||[];
+  if(!orders.length) return "";
+  return `<div class="sec">Tests a clinician ordered</div>
+  ${orders.slice().reverse().map(dxCard).join("")}`;
+}
+
+// One option, one line of substance. The caveats are identical on every
+// centre — "no network information", "whether it runs this test is not
+// something this search can tell" — so repeating them eight times buries the
+// only things that differ, which are the name and the distance. They are said
+// once, under the list, and each row carries a chip instead.
+function dxOption(x, i){
+  const known = x.in_network_listed;
+  const unknownNetwork = /no network information/i.test(x.network_note||"");
+  const isLab = !!x.offers_test;
+  return `<div class="dxrow">
+    <div class="dxnum num">${Number(x.distance_km).toFixed(1)}<span>km</span></div>
+    <div class="dxbody">
+      <div class="dxname">${esc(x.name)}</div>
+      <div class="pills" style="margin-top:6px">
+        ${i===0?`<span class="pill p-teal">nearest</span>`:""}
+        ${isLab?`<span class="pill p-violet">diagnostic centre</span>`
+               :`<span class="pill p-slate">medical facility</span>`}
+        ${known?`<span class="pill p-teal">listed in network</span>`
+               :unknownNetwork?`<span class="pill p-slate">network not known</span>`
+               :`<span class="pill p-amber">not listed in network</span>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+// What was arranged for one ordered test, and - more to the point - what was
+// tried and refused on the way there.
+//
+// The appointment is the smaller half of this. Any booking site can show you a
+// confirmation; almost none can show you that it tried three other places
+// first, why each one failed, and which of twelve checks it had to pass before
+// it was allowed to submit anything. That is the difference between a lane
+// that looked something up and one that decided, and it is the part worth
+// putting on screen.
+// The one piece of evidence on this record that KinGuard did not write.
+// Fetched on demand rather than rendered inline: the link is short-lived by
+// design, and minting one for a card nobody opened would waste it.
+// The claim form is CREDENTIALED, unlike the verify endpoint, because it states
+// a diagnosis. So it is fetched with the session rather than linked directly,
+// and the tab is opened from the redirect the server mints.
+async function openClaimForm(btn){
+  const slot = document.getElementById("claim-form-slot");
+  if(!slot) return;
+  if(btn) btn.disabled = true;
+  slot.innerHTML = `<p class="mute" style="margin:10px 0 0">Fetching it…</p>`;
+  const r = await api(`/api/cases/${encodeURIComponent(S.caseId)}/claim-form`, {auth:true});
+  if(btn) btn.disabled = false;
+  if(!r || !r.url){
+    slot.innerHTML = `<p class="mute" style="margin:10px 0 0">${esc(
+      (r && r.detail) || "No claim form is on this admission yet. One is filled "
+      + "when the discharge summary arrives.")}</p>`;
+    return;
+  }
+  slot.innerHTML = `<p class="mute" style="margin:10px 0 0">${esc(r.note||"")}</p>`;
+  window.open(r.url, "_blank", "noopener");
+}
+
+async function showBookingEvidence(id, stage){
+  const slot = document.getElementById(`ev-${id}`);
+  if(!slot) return;
+  slot.innerHTML = `<p class="mute" style="margin:10px 0 0">Fetching it…</p>`;
+  const r = await api(`/api/cases/${encodeURIComponent(S.caseId)}/appointments/`
+    + `${encodeURIComponent(id)}/evidence?stage=${encodeURIComponent(stage||"answer")}`,
+    {auth:true});
+  if(!r || !r.url){
+    slot.innerHTML = `<p class="mute" style="margin:10px 0 0">${esc(
+      (r && r.detail) || "No page was photographed for this one. The appointment stands either way.")}</p>`;
+    return;
+  }
+  slot.innerHTML = `<img src="${esc(r.url)}" alt="the centre's page as submitted"
+      style="margin-top:12px;max-width:100%;border-radius:10px;border:1px solid var(--line)">
+    <p class="mute" style="font-size:13px;margin-top:6px">${esc(r.note)}</p>`;
+}
+
+function apptCard(a){
+  const requested = a.status === "requested";
+  const done = a.status === "confirmed";
+  const dead = a.status === "cancelled";
+  const resulted = a.status === "resulted";
+  // `resulted` says more than `confirmed` does, so it wins the pill: a centre
+  // confirming is a promise, and a report arriving is evidence she went. The
+  // fallback is the amber one, so a status nobody has taught this renderer
+  // understates rather than claims something that has not happened.
+  const pill = dead ? `<span class="pill p-slate">cancelled</span>`
+    : resulted ? `<span class="pill p-teal">carried out &middot; result on file</span>`
+    : done ? `<span class="pill p-teal">confirmed by the centre</span>`
+    : `<span class="pill p-amber">requested, not yet confirmed</span>`;
+  const cancel = a.cancel_phone || a.cancel_url || "";
+  const when = new Date(a.requested_at);
+  const tried = (a.attempts||[]).length;
+
+  return `<div class="card" style="margin-top:14px">
+    <h2 class="mini">Arranged by KinGuard</h2>
+    <div class="pills" style="margin:-4px 0 12px">${pill}
+      <span class="pill p-slate">${esc(String(a.channel||"web"))}</span></div>
+
+    <div style="font-weight:700;font-size:15px">${esc(a.centre_name||"")}</div>
+    ${a.centre_address?`<div class="mute" style="font-size:13.5px;margin-top:2px">
+      ${esc(a.centre_address)}</div>`:""}
+    <div class="mute" style="font-size:13px;margin-top:6px">
+      ${Number(a.distance_km||0).toFixed(1)} km from the hospital ·
+      ${esc(when.toLocaleDateString())}
+      ${esc(when.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}))}</div>
+
+    ${a.why_this_centre?`<div class="strip note" style="margin-top:12px">
+      ${esc(a.why_this_centre)}</div>`:""}
+
+    ${tried?`<div style="margin-top:14px">
+      <div class="mute" style="font-size:12px;font-weight:800;letter-spacing:.06em;
+        text-transform:uppercase;margin-bottom:8px">Tried first, and why not</div>
+      ${(a.attempts||[]).map(t=>`<div class="dxrow">
+        <div class="dxbody">
+          <div class="dxname" style="font-size:14px">${esc(t.name||"")}</div>
+          <div class="mute" style="font-size:13px;margin-top:3px">${esc(t.detail||"")}</div>
+          ${t.failed_check?`<div class="pills" style="margin-top:6px">
+            <span class="pill p-amber">${esc(t.failed_check)}</span></div>`:""}
+        </div></div>`).join("")}
+    </div>`:""}
+
+    ${(a.guards_passed||[]).length?`<div style="margin-top:14px">
+      <div class="mute" style="font-size:12px;font-weight:800;letter-spacing:.06em;
+        text-transform:uppercase;margin-bottom:8px">
+        ${(a.guards_passed||[]).length} checks passed before anything was sent</div>
+      <div class="pills">${(a.guards_passed||[]).map(g=>
+        `<span class="pill p-teal">${esc(g)}</span>`).join("")}</div>
+    </div>`:""}
+
+    ${a.evidence?`<div style="margin-top:14px">
+      ${a.evidence_sent?`<button class="btn"
+        onclick="showBookingEvidence('${esc(a.appointment_id)}','sent')">
+        What was sent</button>`:""}
+      <button class="btn" onclick="showBookingEvidence('${esc(a.appointment_id)}','answer')">
+        What the centre answered</button>
+      <span class="mute" style="margin-left:10px;font-size:13px">
+        photographed either side of the click</span>
+      <div id="ev-${esc(a.appointment_id)}"></div>
+    </div>`:""}
+
+    <div class="strip note" style="margin-top:14px">
+      ${requested?`This is a request. The centre has not confirmed a time, and
+        nothing here says it has.`:""}
+      ${done?`The centre confirmed this.`:""}
+      ${resulted?`A lab report arrived while this was the only test outstanding,
+        so it is recorded as carried out. That is evidence she was seen, not the
+        centre confirming a slot, and no value in the report was read to decide
+        it.`:""}
+      KinGuard did not decide she needs this test and did not pay for anything.
+      ${cancel?`To change or cancel it, ring ${esc(cancel)}.`:""}
+    </div>
+  </div>`;
+}
+
+function dxCard(o){
+  const opts=o.options||[];
+  // "Nothing here is booked" was true of every order and is now true of only
+  // some, so it is said only where it still holds. A standing caveat that has
+  // quietly stopped being true is worse than no caveat.
+  const booked=((S.appointments&&S.appointments.appointments)||[])
+    .filter(a=>a.order_id===o.order_id);
+  const when=new Date(o.recorded_at);
+  // Where the clinician dictated in another language, the English reading
+  // leads and the words they actually said sit under it. The dictation is the
+  // record; the English is derived from it and is labelled that way, which is
+  // the same rule outbound Tamil has always followed in the other direction.
+  const en = o.test_label_en;
+  return `<div class="card">
+    <h2 class="mini">${esc(en || o.test_label)}</h2>
+    ${en?`<p class="mute" style="margin:-8px 0 4px;font-size:14px">
+      ${esc(o.test_label)}</p>
+      <p class="mute" style="margin:0 0 12px;font-size:12.5px">
+        The clinician dictated this; the English above is translated from it.</p>`:""}
+    <p class="mute" style="margin:${en?"0":"-8px"} 0 12px;font-size:13px">
+      Ordered by ${esc(o.ordered_by||"the treating team")} ·
+      ${esc(when.toLocaleDateString())} ${esc(when.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}))}</p>
+    ${o.mobility_note?`<div class="strip note">${esc(o.mobility_note)}</div>`:""}
+    ${opts.length===0
+      ? `<p class="mute">${unknown("no options have been looked up yet")}</p>`
+      : `<div class="dxlist">${opts.map(dxOption).join("")}</div>
+         <p class="mute" style="margin-top:14px;font-size:13px">
+           Distances are from the hospital. KinGuard has no network information
+           for these centres, so confirm coverage with your insurer before you
+           go, and ring ahead to check they run this test.</p>
+         <p class="mute" style="font-size:13px">
+           ${esc(o.options_source_label||"")}
+           ${booked ? "" : `Nothing here is booked: KinGuard is not connected
+           to any of these centres and has not contacted them.`}</p>`}
+  </div>
+  ${booked.map(apptCard).join("")}`;
+}
+
+function vRecord(){
+  // The credential check comes FIRST. The parent id is read from the brief,
+  // which itself needs a credential, so ordering these the other way meant an
+  // uncredentialed visitor fell through to "open a case" and was never shown
+  // the sign-in at all — the gate was unreachable from the one view that
+  // exists behind it.
+  if(!S.token && !S.linkToken) return S.caseId ? gate() : vOpenOrWait();
+  if(!S.parentId) return vOpenOrWait();
+  if(S.record?.__denied) return denied(S.record.detail,"The health record");
+  if(!S.record) return `<div class="card"><p class="mute">Reading the record…</p></div>`;
+  const docs=S.record.documents||[], pr=S.record.profile||{};
+  return `${synthOnce()}
+  ${title("Health record","Parsed from uploaded documents. New readings are compared with the baseline.")}
+  ${vHandoff()}
+  ${vHybridExplainCard("record")}
+  ${vDocUploadCard()}
+  <div class="card"><h2 class="mini">Baseline</h2>
+    ${row("Name",esc(pr.name))}${row("Age",esc(pr.age))}
+    ${row("Conditions",(pr.chronic_conditions||[]).map(esc).join(", ")||unknown("none recorded"))}
+    ${row("Allergies",(pr.allergies||[]).map(esc).join(", ")||unknown("none recorded"))}
+    ${(pr.medications||[]).length
+        ? `<div class="row stack"><div class="k">Medication</div><div class="v">
+             ${(pr.medications||[]).map(m=>`<span class="chip">${esc(titleCase(
+                 String(m.name||"").replace(/^(tab|tablet|cap|capsule)\b\.?\s*/i,"")))}${
+                 m.dose?` ${esc(m.dose)}`:""}</span>`).join(" ")}
+           </div></div>`
+        : row("Medication", unknown("none recorded"))}
+  </div>
+  ${vClinicianNotes()}
+  ${vDiagnostics()}
+  <div class="sec">Documents on file</div>
+  ${docs.length===0?`<div class="card"><p>${unknown("no documents have been added yet")}</p></div>`:""}
+  ${docs.map(d=>{
+    // If anything in this document is new and abnormal, the line reads as a
+    // warning even when other values were stable — a mixed result must not be
+    // coloured reassuringly because one analyte happened not to move.
+    const txt=d.delta_vs_baseline||"";
+    const base=/consistent with baseline/.test(txt) && !/new and abnormal/.test(txt);
+    return `<div class="card ${base?"edge-teal":"edge-amber"}">
+      <h2>${esc(DOC_LABEL[d.kind]||String(d.kind||"document").replace(/_/g," "))}</h2>
+      <p class="mute" style="margin:-8px 0 10px;font-size:13px">${esc(d.document_id||"")}</p>
+      ${d.summary?`<p style="margin:0 0 12px">${esc(d.summary)}</p>`:""}
+      ${arrivedMidEpisode(d)?`<div class="pills" style="margin:-6px 0 12px">
+        <span class="pill p-slate">added during this episode · ${esc(new Date(d.parsed_at).toLocaleTimeString())}</span>
+      </div>`:""}
+      ${docDetails(d)}
+      ${(d.observations||[]).length===0
+        // A prescription has no lab values, and saying so as an "unknown"
+        // reports a normal document as missing data. Only a lab report with
+        // nothing read off it is genuinely an unknown.
+        ? (d.kind==="blood_report"
+            ? `<p>${unknown("no results could be read off this report")}</p>` : "")
+        :d.observations.map(o=>`<div class="obs">
+            <div class="n">${esc(o.name)}</div>
+            <div class="v num">${esc(o.value)} <span class="u">${esc(o.unit||"")}</span>
+              ${o.flag?`<span class="pill ${["high","low","abnormal"].includes((o.flag||"").toLowerCase())?"p-red":"p-teal"}">${esc(o.flag)}</span>`:""}
+            </div></div>`).join("")}
+      <button class="paper" onclick="openDocPhoto('${esc(d.document_id)}')">
+        <span aria-hidden="true">◱</span> Open the photograph it was read from</button>
+      ${d.delta_vs_baseline?`<div class="deltas">
+        ${d.delta_vs_baseline.split("; ").map(n=>{
+          const material=/new and abnormal/.test(n);
+          const stable=/consistent with baseline|within normal variation/.test(n);
+          return `<div class="dline ${material?"new":stable?"base":""}">
+            <span class="ic">${material?"⚠":"✓"}</span><span>${esc(n)}</span></div>`;
+        }).join("")}
+      </div>`:""}
+    </div>`;}).join("")}`;
+}
+
+// Everything the reader got off the page, laid out per kind. A one-line
+// summary was all that showed, so a prescription with six medications and a
+// discharge summary with a diagnosis and a follow-up date both rendered as a
+// single sentence and nothing else.
+const DETAIL_ROWS = {
+  discharge_summary: [["Hospital","hospital"],["Consultant","consultant"],
+                      ["Admitted","admitted_on"],["Discharged","discharged_on"],
+                      ["Diagnosis","diagnosis"],
+                      ["Condition at discharge","condition_at_discharge"],
+                      ["Follow-up due","follow_up_on"]],
+  prescription:      [["Prescribed on","prescribed_on"],["Prescriber","prescriber"]],
+  policy:            [["Insurer","insurer"],["Policy number","policy_number"],
+                      ["Sum insured","sum_insured_inr"],["Co-pay","copay_percent"],
+                      ["Room rent limit","room_rent_percent_per_day"],
+                      ["ICU limit","icu_percent_per_day"],["Valid until","valid_until"]],
+  blood_report:      [["Collected on","collected_on"]],
+};
+const MONEY_KEYS = new Set(["sum_insured_inr"]);
+const PERCENT_KEYS = new Set(["copay_percent","room_rent_percent_per_day","icu_percent_per_day"]);
+// Prose belongs on its own line. A diagnosis right-aligned in bold against a
+// label is a sentence pretending to be a figure.
+const PROSE_KEYS = new Set(["diagnosis","condition_at_discharge"]);
+
+function detailValue(key, value){
+  if(MONEY_KEYS.has(key)) return `INR ${Number(value).toLocaleString("en-IN")}`;
+  if(PERCENT_KEYS.has(key)) return `${esc(value)}%`;
+  return esc(value);
+}
+
+// "1 - 0 - 0 after breakfast 30 days" is a transcription of what the paper
+// prints. The three numbers are morning, afternoon and night.
+//
+// The slots are rendered ONLY when that pattern is actually on the page. Where
+// the prescription says "once daily, after breakfast" instead, the words are
+// shown as they were written — deciding which slot that meant would be this
+// code inventing a dosing time, and a dosing time invented by a renderer is
+// exactly the kind of thing nobody double-takes at.
+function parseDose(frequency){
+  let rest = String(frequency||"").trim();
+  if(!rest) return {slots:null, chips:[]};
+
+  let slots = null;
+  const pattern = rest.match(/(\d+)\s*[-–—]\s*(\d+)\s*[-–—]\s*(\d+)/);
+  if(pattern){
+    slots = [pattern[1], pattern[2], pattern[3]];
+    rest = rest.replace(pattern[0], " ");
+  }
+
+  const chips = [];
+  const duration = rest.match(/\b\d+\s*(days?|weeks?|months?)\b/i);
+  if(duration){ rest = rest.replace(duration[0], " "); }
+
+  rest.split(/[,;·]/).map(t=>t.trim()).filter(Boolean).forEach(t=>chips.push(t));
+  if(duration) chips.push(duration[0].trim());
+  return {slots, chips};
+}
+
+const SLOT_TITLES = ["morning", "afternoon", "night"];
+
+function medRow(m){
+  const {slots, chips} = parseDose(m.frequency);
+  // "Tab ASPIRIN" is a form and a name. Splitting them lets the name be read.
+  const raw = String(m.name||"").trim();
+  const form = raw.match(/^(tab|tablet|cap|capsule|syp|syrup|inj|injection)\b\.?/i);
+  const name = form ? raw.slice(form[0].length).trim() : raw;
+
+  const slotHtml = slots ? `<span class="slots">${slots.map((n,i)=>
+    `<span class="slot ${Number(n)>0?"on":""}" title="${SLOT_TITLES[i]}">${esc(n)}</span>`
+    ).join("")}</span>` : "";
+
+  return `<div class="med">
+    <div class="mname">${form?`<span class="form">${esc(form[0].replace(/\.$/,""))}</span>`:""}
+      <span>${esc(titleCase(name))}</span></div>
+    <div class="dose">${esc(m.dose||"")}</div>
+    ${slotHtml||chips.length?`<div class="when">${slotHtml}
+      ${chips.map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div>`:""}
+  </div>`;
+}
+
+// ASPIRIN shouted at a reader is harder to read than Aspirin, and the paper
+// only shouts because prescriptions are printed in caps.
+function titleCase(text){
+  if(text !== text.toUpperCase()) return text;
+  return text.toLowerCase().replace(/\b[a-z]/g, c=>c.toUpperCase());
+}
+
+function docDetails(d){
+  const det = d.details || {};
+  const rows = (DETAIL_ROWS[d.kind]||[])
+    .filter(([,key]) => det[key] !== null && det[key] !== undefined && det[key] !== "")
+    .map(([label,key]) => PROSE_KEYS.has(key)
+      ? `<div class="row stack"><div class="k">${esc(label)}</div>
+           <div class="v">${detailValue(key, det[key])}</div></div>`
+      : row(label, detailValue(key, det[key])))
+    .join("");
+
+  const allergies = (det.allergies||[]).filter(Boolean);
+  const allergyBlock = allergies.length ? `<div class="row stack">
+      <div class="k">Allergies on this document</div>
+      <div class="v"><span class="chip warn">${allergies.map(esc).join('</span> <span class="chip warn">')}</span></div>
+    </div>` : "";
+
+  const network = (det.network_hospitals||[]).filter(Boolean);
+  const networkBlock = network.length ? `<div class="row stack">
+      <div class="k">Network hospitals</div>
+      <div class="v">${network.map(h=>`<span class="chip">${esc(h)}</span>`).join(" ")}</div>
+    </div>` : "";
+
+  const meds = det.medications || det.discharge_medications || [];
+  const heading = det.discharge_medications ? "Discharge medication" : "On this prescription";
+  const anySlots = meds.some(m => parseDose(m.frequency).slots);
+  const medBlock = meds.length ? `<div class="meds">
+      <div class="meds-head"><h3>${heading}</h3>
+        <span class="count num">${meds.length} item${meds.length===1?"":"s"}</span></div>
+      ${anySlots?`<p class="meds-legend">Doses read as morning · afternoon · night.</p>`:""}
+      ${meds.map(medRow).join("")}
+    </div>` : "";
+
+  return `${rows}${allergyBlock}${networkBlock}${medBlock}`;
+}
+
+// Same shape as the bill photograph: the bucket is private, so the URL is
+// fetched through the credentialed API and the tab is opened synchronously on
+// the click, before the await, or the browser treats it as a popup.
+function openDocPhoto(documentId){
+  const tab = window.open("", "_blank");
+  api(`/api/parents/${encodeURIComponent(S.parentId)}/documents/${encodeURIComponent(documentId)}/image`,
+      {auth:true}).then(r=>{
+    if(!tab) return;
+    if(r && r.url){ tab.location = r.url; return; }
+    tab.document.title = "Photograph unavailable";
+    tab.document.body.style.font = "16px system-ui";
+    tab.document.body.style.padding = "24px";
+    tab.document.body.textContent = (r && (r.detail || r.__error))
+      || "That photograph could not be opened.";
+  }).catch(()=>{ if(tab) tab.document.body.textContent = "That photograph could not be opened."; });
+}
+
+// The photograph sits behind the credential, so a plain href cannot reach it —
+// an anchor carries no bearer token and no signed link parameters, and the
+// endpoint correctly answered 401 every time. Fetch it the way every other
+// credentialed read is fetched, then send the tab to the short-lived signed URL.
+//
+// The tab is opened synchronously on the click, before the await: a window
+// opened from a resolved promise is a popup, and browsers block it.
+function openBillPhoto(billId){
+  const tab = window.open("", "_blank");
+  api(`/api/cases/${encodeURIComponent(S.caseId)}/bills/${encodeURIComponent(billId)}/image`,
+      {auth:true}).then(r=>{
+    if(!tab) return;
+    if(r && r.url){ tab.location = r.url; return; }
+    // Say what happened rather than leaving a blank tab, which reads as a
+    // browser failure rather than as a boundary or a missing bucket.
+    tab.document.title = "Photograph unavailable";
+    tab.document.body.style.font = "16px system-ui";
+    tab.document.body.style.padding = "24px";
+    tab.document.body.textContent = (r && (r.detail || r.__error))
+      || "That photograph could not be opened. Sign in on the dashboard and try again.";
+  }).catch(()=>{ if(tab) tab.document.body.textContent = "That photograph could not be opened."; });
+}
+
+// What was billed, before what an insurer said about it. The photograph is one
+// tap away from every figure, because a number you cannot check against the
+// paper it came from is worth very little.
+function vBills(){
+  const b = S.bills;
+  if(!b || b.__denied || b.__error) return "";
+  const bills = b.bills || [], est = b.estimate || {};
+  if(!bills.length) return "";
+
+  const inr = n => `INR ${Number(n||0).toLocaleString("en-IN")}`;
+  const billed = est.total_billed_inr || 0;
+  const pay = est.estimated_you_pay_inr || 0;
+  const cov = est.estimated_covered_inr || 0;
+  const pct = t => billed ? Math.max(t > 0 ? 1.5 : 0, (t / billed) * 100) : 0;
+
+  const costly = (est.lines||[]).filter(l => l.estimated_you_pay_inr > 0);
+  const free   = (est.lines||[]).filter(l => !(l.estimated_you_pay_inr > 0));
+  const freeTotal = free.reduce((s,l)=>s+(l.claimed_inr||0),0);
+
+  // A reason people can take in without reading: what kind of rule bit, first,
+  // then the arithmetic for anyone who wants to check it.
+  const reason = l => {
+    const r = String(l.rule||"");
+    if(/exclud/i.test(r)) return `<span class="tag excl">Not covered</span>${esc(r)}`;
+    if(/sub-limit/i.test(r)) return `<span class="tag limit">Sub-limit</span>${esc(r)}`;
+    if(/no policy/i.test(r)) return `<span class="tag excl">No policy on file</span>${esc(r)}`;
+    return esc(r);
+  };
+
+  return `
+  <div class="card edge-red">
+    <div class="headline">
+      <div class="lbl">Estimated to pay</div>
+      <div class="amt">${inr(pay)}</div>
+      <div class="of">of ${inr(billed)} billed across ${est.bills_counted||bills.length} bill(s)</div>
+    </div>
+    <div class="split">
+      <i class="cov" style="width:${pct(cov)}%"></i><i class="pay" style="width:${pct(pay)}%"></i>
+    </div>
+    <div class="legend">
+      <span><span class="key" style="background:var(--teal)"></span>Estimated covered <b>${inr(cov)}</b></span>
+      <span><span class="key" style="background:var(--red)"></span>Estimated to pay <b>${inr(pay)}</b></span>
+    </div>
+    <div class="pills" style="margin-top:12px">
+      <span class="pill p-amber">ESTIMATE, NOT THE INSURER'S DECISION</span>
+      ${est.needs_review?`<span class="pill p-red">A LINE NEEDS CHECKING</span>`:""}
+      ${est.may_understate?`<span class="pill p-red">LIKELY TO BE MORE THAN THIS</span>`:""}
+    </div>
+    ${est.may_understate?`<div class="strip note" style="margin-top:12px">
+      ${esc(est.may_understate_note)}</div>`:""}
+  </div>
+
+  ${costly.length?`<div class="card">
+    <h2>What you are estimated to pay for</h2>
+    ${costly.map(l=>`
+      <div class="bline">
+        <div class="top">
+          <div class="name">${esc(l.label)}</div>
+          <div class="pay">${inr(l.estimated_you_pay_inr)}</div>
+        </div>
+        ${l.vendor?`<div class="src">${esc(l.vendor)}</div>`:""}
+        <div class="bar">
+          <i class="cov" style="width:${l.claimed_inr?(l.estimated_covered_inr/l.claimed_inr)*100:0}%;background:var(--teal)"></i>
+          <i class="pay" style="width:${l.claimed_inr?(l.estimated_you_pay_inr/l.claimed_inr)*100:0}%;background:var(--red)"></i>
+        </div>
+        <div class="why">${reason(l)}</div>
+        <div class="why" style="margin-top:3px;color:var(--ink-mute)">
+          billed ${inr(l.claimed_inr)} · covered ${inr(l.estimated_covered_inr)}</div>
+      </div>`).join("")}
+  </div>`:""}
+
+  ${free.length?`<div class="card">
+    <details class="covered">
+      <summary><span>${free.length} line(s) estimated fully covered</span>
+        <b>${inr(freeTotal)}</b></summary>
+      ${free.map(l=>`<div class="covrow">
+        <span>${esc(l.label)}${l.vendor?` <span style="color:var(--ink-mute)">· ${esc(l.vendor)}</span>`:""}</span>
+        <b>${inr(l.claimed_inr)}</b></div>`).join("")}
+    </details>
+  </div>`:""}
+
+  <div class="card">
+    <h2 class="mini">The bills these came from</h2>
+    ${bills.map(bill=>`
+      <div class="row stack">
+        <div class="k">${[esc(bill.vendor||"bill"), bill.bill_date?esc(bill.bill_date):null,
+            `${bill.line_items.length} line items`].filter(Boolean).join(" · ")}</div>
+        <div class="v">
+          <a href="#" onclick="openBillPhoto('${esc(bill.bill_id)}');return false">open the photograph</a>
+          ${bill.needs_review?`<span class="why2" style="color:var(--red-ink)">${esc(bill.review_reason||"")}</span>`:""}
+        </div>
+      </div>`).join("")}
+    <div class="row"><div class="k">Actually settled</div>
+      <div class="v">${est.settled_inr===null||est.settled_inr===undefined
+        ? unknown("no adjudication yet. Nobody has decided anything, which is not the same as nothing being owed")
+        : inr(est.settled_inr)}</div></div>
+    <p class="mute" style="margin-top:12px">${esc(est.disclaimer||"")}</p>
+    <p class="mute" style="margin-top:6px">${esc(est.basis||"")}</p>
+  </div>`;
+}
+
+// ---- interim bill payment ------------------------------------------------
+//
+// This view renders what the enforcer decided. It computes no cap, makes no
+// pay/refuse decision, and never sees a payment address: the API returns a
+// label and a hash reference, so the raw destination cannot reach the DOM even
+// by accident. Every figure below is a field the backend already summed.
+
+function vPayments(){
+  const p = S.pay;
+  if(!p || p.__denied || p.__error) return "";
+  const m = p.mandate;
+  const open = (p.escalations || []).filter(e => e.open);
+  const done = (p.escalations || []).filter(e => !e.open);
+
+  return `<div class="sec">Interim bills</div>
+  ${S.payNote?`<div class="strip ${S.payNoteOk?"note":""}"
+     style="${S.payNoteOk?"background:var(--teal-bg);color:var(--teal-ink)"
+                        :"background:var(--red-bg);color:var(--red-ink)"}">
+     ${esc(S.payNote)}</div>`:""}
+  ${S.signInFor?signInPanel(S.signInFor):""}
+  <div class="strip note">${esc(p.note || "")} Autonomy is bounded: the agent pays only
+    inside the limits you set, and anything else comes to you.</div>
+  ${open.map(refusalCard).join("")}
+  ${vUnconsidered()}
+  ${vMandate(m, p)}
+  ${vMoney(p)}
+  ${(p.payments || []).map(paymentCard).join("")}
+  ${done.length?`<details class="covered"><summary>${done.length} earlier
+      refusal${done.length===1?"":"s"}, since dealt with</summary>
+      ${done.map(e => `<div class="row stack"><div class="k">${esc(e.bill_id)}</div>
+        <div class="v">${esc(e.reason||"")}</div></div>`).join("")}</details>`:""}`;
+}
+
+// The lead. A bill the agent would not pay, why not, and the one action that
+// resolves it — all in the same place, because a family reading this on a phone
+// at 3am should not have to go looking for the button.
+function refusalCard(e){
+  const named = String(e.failing_check || "a check").replace(/_/g, " ");
+  return `<div class="refusal">
+    <span class="named">not paid: ${esc(named)}</span>
+    <div class="head">
+      <div><strong>Bill ${esc(e.bill_id)}</strong> needs you</div>
+      <div class="amt">${inr(e.amount_inr)}</div>
+    </div>
+    <p class="why">${esc(e.reason || "")}</p>
+    <p class="mute" style="margin-top:8px">Nothing has moved. The agent checked this
+      against the limits you set and stopped rather than guessing.</p>
+    <div class="btns">
+      <button class="btn" onclick="approvePayment('${esc(e.bill_id)}',${Number(e.amount_inr)||0})"
+        ${S.payBusy===e.bill_id?"disabled":""}>
+        ${S.payBusy===e.bill_id?"Approving…":`Approve ${inr(e.amount_inr)}`}</button>
+    </div>
+  </div>`;
+}
+
+function vMandate(m, p){
+  if(!m) return `<div class="card edge-amber">
+    <h2 class="mini">No payment mandate</h2>
+    <p>Every interim bill needs your approval. Nothing is paid automatically,
+      and nothing can be: there is no authorised destination on this case.</p>
+    ${S.token?`<div class="btns"><button class="btn" onclick="showMandateForm()">
+      Set up automatic payment</button></div>`:`<p class="mute" style="margin-top:10px">
+      Granting one needs a signed-in family session.</p>`}
+    ${S.mandateForm?mandateForm():""}
+  </div>`;
+
+  return `<div class="card edge-teal">
+    <h2 class="mini">Automatic payment is on</h2>
+    ${row("Pays only", esc(m.payee_label))}
+    ${row("Account reference", `<span class="num" style="font-size:13px">${esc(m.payee_ref)}</span>`)}
+    ${row("Per bill, at most", `<span class="num">${inr(m.per_bill_cap_inr)}</span>`)}
+    ${row("In total, at most", `<span class="num">${inr(m.total_cap_inr)}</span>`)}
+    ${row("Still authorised", `<span class="num">${inr(m.remaining_inr)}</span>`)}
+    ${row("Until", esc(new Date(m.window_closes_at).toLocaleString()))}
+    <p class="mute" style="margin-top:10px">The destination is fixed. A bill can ask for
+      an amount; it can never change where money goes. To pay somewhere else you would
+      stop this and set it up again.</p>
+    ${S.token?`<div class="btns"><button class="btn ghost" onclick="revokeMandate()">
+      Stop automatic payment</button></div>`:""}
+  </div>`;
+}
+
+function vMoney(p){
+  return `<div class="split2" style="margin-bottom:12px">
+    <div class="moneybox"><div class="k">Settled</div>
+      <div class="v">${inr(p.paid_inr)}</div>
+      <p class="mute" style="margin-top:4px">confirmed by the rail</p></div>
+    <div class="moneybox"><div class="k">Initiated, not confirmed</div>
+      <div class="v">${inr(p.initiated_unconfirmed_inr)}</div>
+      <p class="mute" style="margin-top:4px">sent, and not yet acknowledged. Not counted as paid</p></div>
+  </div>`;
+}
+
+// A bill that is payable and has never been put to the enforcer — the
+// mandate-granted-after-the-bill case. Asking is a trigger, not an override:
+// the amount comes from the stored bill and the destination from the mandate.
+function vUnconsidered(){
+  const p = S.pay, b = S.bills;
+  if(!p || !b || !b.bills || !S.token) return "";
+  // Only a refusal that still stands counts as decided. One superseded by a
+  // mandate being granted since is filed, not settled, so its bill comes back
+  // here and asks to be checked rather than sitting under a closed refusal
+  // with no way to act on it.
+  const decided = new Set([
+    ...(p.payments || []).map(x => x.bill_id),
+    ...(p.escalations || []).filter(x => x.open || !x.superseded_by_mandate)
+       .map(x => x.bill_id),
+  ]);
+  const waiting = b.bills.filter(x => (x.balance_due_inr || 0) > 0
+                                      && !decided.has(x.bill_id));
+  if(!waiting.length) return "";
+
+  return waiting.map(x => `<div class="card">
+    <h2 class="mini">Bill ${esc(x.bill_id)} has ${inr(x.balance_due_inr)} outstanding</h2>
+    <p class="mute">It has not been put to the payment checks yet.</p>
+    <div class="btns"><button class="btn ghost"
+      onclick="considerBill('${esc(x.bill_id)}')">Check it against my limits</button></div>
+  </div>`).join("");
+}
+
+async function considerBill(billId){
+  await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}/bills/${encodeURIComponent(billId)}/consider`,
+    {method:"POST", headers:{Authorization:`Bearer ${S.token}`}});
+  await load();
+}
+
+function paymentCard(x){
+  // "paid" is reserved for money the rail has confirmed. Until then it was
+  // SENT, which is a different fact — the card used to say "paid automatically"
+  // and "not counted as paid" in the same breath.
+  const how = x.autonomous ? "automatically" : "after you approved it";
+  const state = x.confirmed ? `paid ${how}` : `sent ${how}`;
+  // The rail, not a blanket "(simulated)". A test-mode Razorpay capture and a
+  // simulated payout are both short of real money, but they are short of it in
+  // different ways, and the card claimed the same thing about each.
+  const detail = x.confirmed
+    ? `Settled with ${esc(x.payee_label)}. ${esc(x.settlement_note || "")}`
+    : `Sent to ${esc(x.payee_label)}. Not confirmed yet, so it is not counted as paid.`;
+
+  // WHAT IT DID NOT PAY, which is the more interesting number.
+  //
+  // Under a cashless authorisation the insurer settles its part with the
+  // hospital directly, so the card used to show INR 9,733 against a bill that
+  // plainly says INR 27,300 and left a reader to assume an underpayment. The
+  // split is already on the chain; this reads it back rather than recomputing.
+  const sh = (kinds("payment.auto_initiated").concat(kinds("payment.approved")))
+    .map(r => r.payload).find(pl => pl.payment_id === x.payment_id)?.share;
+  const withheld = sh && sh.basis === "cashless_residual"
+    && sh.insurer_share_inr > 0 ? sh : null;
+
+  return `<div class="cleared">
+    <div class="head" style="display:flex;justify-content:space-between;gap:12px">
+      <div><strong>Bill ${esc(x.bill_id)}</strong> · ${state}</div>
+      <div class="num" style="font-weight:800">${inr(x.amount_inr)}</div>
+    </div>
+    ${withheld?`<div class="row stack" style="margin-top:8px;padding-top:8px;
+        border-top:1px solid var(--line-soft)">
+      <div class="k"><span class="pill p-teal">did not pay
+        ${inr(withheld.insurer_share_inr)}</span></div>
+      <div class="v long">Of the ${inr(withheld.balance_due_inr)} on the bill,
+        about ${inr(withheld.insurer_share_inr)} is settled by your insurer with
+        the hospital directly under cashless, so only ${inr(x.amount_inr)} was
+        yours to pay.
+        <span class="why2">That split is KinGuard's estimate from your policy,
+        not the insurer's decision.${withheld.estimate_is_provisional
+          ? " It can come out low where a room went over its limit, so the "
+            + "hospital may still ask for more." : ""}</span></div></div>`:""}
+    <p class="mute" style="margin-top:4px">${detail}</p>
+    ${!x.confirmed && x.checkout_url?`<button class="paper"
+      onclick="window.open('${esc(x.checkout_url)}','_blank')">
+      <span aria-hidden="true">\u25B8</span> Open the payment page</button>`:""}
+    ${!x.confirmed?(S.upi&&S.upi.payment_id===x.payment_id
+      ? upiPanel(S.upi)
+      : `<button class="paper" onclick="showUpi('${esc(x.payment_id)}')">
+          <span aria-hidden="true">\u25A6</span> Pay by UPI</button>`):""}
+    ${(x.guards_passed||[]).length?`<div class="guards">${
+      x.guards_passed.map(g=>`<span class="guard">${esc(String(g).replace(/_/g," "))}</span>`).join("")
+    }</div>`:""}
+  </div>`;
+}
+
+// UPI is how an Indian family actually settles a hospital bill: scan, confirm
+// in whichever app they use, done. No provider onboarding, nothing for the
+// hospital to integrate, and it works on the phone already in their hand.
+//
+// Fetched on demand rather than shipped with the payment list. Every other
+// response carries a reference to the destination instead of the destination,
+// so this is the one place an address arrives, and asking for it is a
+// deliberate act rather than a side effect of opening the tab.
+function upiPanel(u){
+  return `<div class="card" style="margin-top:10px;text-align:center">
+    <h2 class="mini">Pay ${inr(u.amount_inr)} to ${esc(u.payee_label)}</h2>
+    <div style="max-width:210px;margin:10px auto;line-height:0">${u.qr_svg||""}</div>
+    <p class="mute">Scan with any UPI app, or use the ID below.</p>
+    <p class="num" style="font-weight:700;word-break:break-all">${esc(u.payee_vpa||"")}</p>
+    <div class="btns" style="justify-content:center">
+      <a class="btn" href="${esc(u.upi_intent||"")}">Open a UPI app</a>
+      <button class="btn ghost" onclick="hideUpi()">Close</button>
+    </div>
+    <p class="mute" style="margin-top:8px">This is the destination on your
+      mandate. A bill cannot change it.</p>
+  </div>`;
+}
+
+async function showUpi(paymentId){
+  if(!S.token){
+    askSignIn("Seeing where a payment goes needs a signed-in family session.");
+    return;
+  }
+  const r = await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}`
+    + `/payments/${encodeURIComponent(paymentId)}/upi`,
+    {headers:{Authorization:`Bearer ${S.token}`}});
+  if(!r.ok){ S.payNote = `Could not load the UPI details (HTTP ${r.status}).`;
+             S.payNoteOk = false; render(); return; }
+  S.upi = await r.json();
+  render();
+}
+
+function hideUpi(){ S.upi = null; render(); }
+
+function mandateForm(){
+  return `<div class="card" style="margin-top:12px">
+    <h2 class="mini">Authorise automatic payment</h2>
+    <p class="mute">Read the hospital's UPI address off their billing desk and type it
+      here. It is pinned from that moment: no bill and no reading can change it.</p>
+    <div class="row stack"><div class="k">Hospital UPI address</div>
+      <input id="mvpa" placeholder="name@bank" style="width:100%;padding:10px;
+        border:1px solid var(--line);border-radius:var(--r);font-family:inherit"></div>
+    <div class="row stack"><div class="k">Hospital name</div>
+      <input id="mlabel" placeholder="Sacred Heart Hospital" style="width:100%;padding:10px;
+        border:1px solid var(--line);border-radius:var(--r);font-family:inherit"></div>
+    <div class="row stack"><div class="k">Per bill, at most (INR)</div>
+      <input id="mper" type="number" value="50000" style="width:100%;padding:10px;
+        border:1px solid var(--line);border-radius:var(--r);font-family:inherit"></div>
+    <div class="row stack"><div class="k">In total, at most (INR)</div>
+      <input id="mtot" type="number" value="200000" style="width:100%;padding:10px;
+        border:1px solid var(--line);border-radius:var(--r);font-family:inherit"></div>
+    <div class="row stack"><div class="k">For how many hours</div>
+      <input id="mhrs" type="number" value="48" style="width:100%;padding:10px;
+        border:1px solid var(--line);border-radius:var(--r);font-family:inherit"></div>
+    ${S.mandateError?`<p class="mute" style="color:var(--red-ink)">${esc(S.mandateError)}</p>`:""}
+    <div class="btns">
+      <button class="btn" onclick="confirmMandate()">Review and grant</button>
+      <button class="btn ghost" onclick="S.mandateForm=false;S.mandateError=null;render()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function showMandateForm(){ S.mandateForm = true; S.mandateError = null; render(); }
+
+// Signing in has to happen WHERE the person is. Sending them to another tab to
+// do it — which is what approving used to do — loses the thing they were in the
+// middle of and looks like the button did nothing.
+//
+// It also has to offer the same choice the gate offers. "Sign in to share" ran
+// signIn() directly, which silently used the demo credential even on a
+// deployment with Google configured.
+function signInPanel(reason){
+  return `<div class="card edge-teal" style="margin-top:12px">
+    <h2 class="mini">Sign in to continue</h2>
+    <p>${esc(reason)}</p>
+    <p class="mute" style="margin-top:6px">The link that opened this page can read
+      the record. Authorising money or sharing with a clinician needs a session.</p>
+    <div class="btns" style="align-items:center">
+      <div id="gbtn"></div>
+      <button class="btn ghost" onclick="signIn()">Use the demo credential</button>
+    </div>
+  </div>`;
+}
+
+function askSignIn(reason){ S.signInFor = reason; render(); }
+
+async function confirmMandate(){
+  const vpa = document.getElementById("mvpa")?.value?.trim() || "";
+  const label = document.getElementById("mlabel")?.value?.trim() || "";
+  // Shown back before anything is granted, because this is the one value in
+  // the system that decides where money goes.
+  if(!confirm(`Authorise automatic payment to:\n\n${label || "(no name)"}\n${vpa}\n\n`
+      + `This becomes the only destination on this case. It cannot be changed by a bill.`)) return;
+
+  const body = {
+    payee_vpa: vpa, payee_label: label,
+    per_bill_cap_inr: Number(document.getElementById("mper")?.value || 0),
+    total_cap_inr: Number(document.getElementById("mtot")?.value || 0),
+    hours: Number(document.getElementById("mhrs")?.value || 0),
+    granted_by: S.who?.name || "family",
+  };
+  const r = await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}/payment-mandate`,
+    {method:"POST", headers:{Authorization:`Bearer ${S.token}`,
+     "content-type":"application/json"}, body: JSON.stringify(body)});
+  const out = await r.json();
+  if(!r.ok){ S.mandateError = out.detail || `HTTP ${r.status}`; render(); return; }
+  S.mandateForm = false; S.mandateError = null;
+  await load();
+}
+
+async function revokeMandate(){
+  if(!confirm("Stop automatic payment? Every further bill will need your approval.")) return;
+  await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}/payment-mandate`,
+    {method:"DELETE", headers:{Authorization:`Bearer ${S.token}`}});
+  await load();
+}
+
+async function approvePayment(billId, amount){
+  if(!S.token){
+    askSignIn(`Approving ${inr(amount)} for bill ${billId} needs a signed-in family session.`);
+    return;
+  }
+  if(!confirm(`Approve ${inr(amount)} for bill ${billId}?`)) return;
+  S.payBusy = billId; render();
+  try{
+    const r = await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}/payments/approve`,
+      {method:"POST", headers:{Authorization:`Bearer ${S.token}`,
+       "content-type":"application/json"},
+       body: JSON.stringify({bill_id: billId, amount_inr: amount,
+                             approved_by: S.who?.name || "family"})});
+    const out = await r.json();
+    // Say what happened. The refusal card disappears on reload, and a card
+    // vanishing with nothing in its place reads as a failure.
+    S.payNote = r.ok
+      ? `Approved. ${inr(out.amount_inr ?? amount)} initiated to ${out.payee_label || "the hospital"}. Not settled yet.`
+      : `Not approved: ${out.detail || `HTTP ${r.status}`}`;
+    S.payNoteOk = r.ok;
+  } catch(e){ S.payNote = `Not approved: ${String(e)}`; S.payNoteOk = false;
+  } finally { S.payBusy = null; }
+  await load();
+}
+
+function vClaim(){
+  if(!S.trail) return vOpenOrWait();
+  if(S.trail.__denied) return denied(S.trail.detail,"The claim status");
+  const adjs=kinds("claim.adjudicated"), sub=last("claim.submitted");
+  // Only offer the form where the chain says one was actually rendered.
+  const filed = last("claim.filed_on_discharge")?.payload?.claim_form;
+  const bills = vPayments() + vBills();
+  if(!adjs.length && !sub) return `${synthOnce()}
+    ${title("Bills and claim","What was billed, and what the policy is estimated to cover.")}
+    ${vHybridExplainCard("claim")}
+    ${vDocUploadCard()}
+    ${bills || `<div class="card"><h2>Claim</h2><p>${unknown("no claim has been submitted on this case")}</p></div>`}`;
+  const a=adjs.length?adjs[adjs.length-1].payload:null;
+  const priced=a && ["PASS","PARTIAL"].includes(a.outcome);
+  const billsBlock = bills;
+  return `${synthOnce()}
+  ${title("Bills and claim","What was billed, what the policy is estimated to cover, and what the insurer said.")}
+  ${vHybridExplainCard("claim")}
+  ${vDocUploadCard()}
+  ${billsBlock}
+  <div class="sec">Claim status</div>
+  <div class="pills" style="margin-bottom:12px"><span class="pill p-violet">SIMULATED TPA</span></div>
+  <div class="strip note">No production insurer API is integrated. The packet, the policy arithmetic,
+    the SLA clocks and the receipts are real; the counterparty's answer is not.</div>
+  <div class="card">
+    ${row("Claimed", a?`<span class="num">${inr(a.total_claimed_inr)}</span>`:unknown("nothing submitted yet"))}
+    ${row("Allowed", priced?`<span class="num">${inr(a.total_allowed_inr)}</span>`:unknown("the claim has not been priced yet"))}
+    ${row("You may owe", priced?`<span class="num">${inr(a.total_disallowed_inr)}</span>`:unknown("no amount has been priced yet"),"owe")}
+  </div>
+  <div class="card"><h2>SLA</h2>
+    ${sub?.payload?.sla_deadline
+      ? row(esc(sub.payload.sla_kind), esc(new Date(sub.payload.sla_deadline).toLocaleString()))
+      : row("Clock", unknown("no SLA clock recorded"))}
+  </div>
+  ${filed ? `<div class="card"><h2 class="mini">Claim form</h2>
+    <p class="mute" style="font-size:13.5px;margin:-2px 0 10px">Part A, filled from
+      the record when the discharge summary arrived. It is unsigned, and KinGuard
+      has not sent it to any insurer.</p>
+    <button class="btn" onclick="openClaimForm(this)">Open the filled form</button>
+    <div id="claim-form-slot"></div></div>` : ""}
+  <div class="sec">Adjudication history</div>
+  <div class="tl">
+    ${adjs.map((r,i)=>{
+      const p=r.payload, q=p.outcome==="QUERY";
+      // What the previous attempt was waiting on, that this one no longer is.
+      // Read off two receipt fields; nothing is recomputed here.
+      const prev = i>0 ? (adjs[i-1].payload.missing_documents||[]) : [];
+      const resolved = prev.filter(x=>!(p.missing_documents||[]).includes(x));
+      const when = resolvedAt(resolved[0]);
+      return `${resolved.length?`<div class="ev on">
+          <div class="d"><b>${esc(resolved.map(x=>x.replace(/_/g," ")).join(", "))}</b>
+          added to the record${when?` at ${esc(when)}`:""}, then resubmitted as attempt ${p.attempt}.</div>
+          <div class="a">This is why the document appears on the Record tab but was
+            missing when the claim was first assessed.</div>
+        </div>`:""}
+      <div class="ev ${q?"alert":"on"}">
+        <div class="pills"><span class="pill ${q?"p-amber":"p-teal"}">${esc(p.outcome)}</span>
+          <span class="pill p-slate">attempt ${p.attempt}</span>
+          <span class="pill p-slate">${esc(new Date(r.created_at).toLocaleTimeString())}</span></div>
+        ${(p.reasons||[]).map(x=>`<div class="d" style="margin-top:7px">${esc(x)}</div>`).join("")}
+      </div>`;}).join("")}
+  </div>
+  ${adjs.length>1?`<div class="delta base" style="border:0;margin-top:4px"><span class="ic">✓</span>
+    <span>The claim was queried, the missing document was found on the record, and it was
+    resubmitted. That is what the receipts above record.</span></div>`:""}`;
+}
+
+function vAudit(){
+  return `${title("Security & audit","Public where it proves. Private where it reveals.")}
+  <div class="card">
+    <h2>Two access models, both enforced by the server</h2>
+    <div class="row"><div class="k"><span class="pill p-teal">open</span></div>
+      <div class="v long"><code class="hash">/api/cases/{id}/verify</code>
+        <span class="why2">Proves the record was not altered without revealing what it says.
+        No credential. Anyone can check us, including you, from a terminal.</span></div></div>
+    <div class="row"><div class="k"><span class="pill p-red">credentialed</span></div>
+      <div class="v long"><code class="hash">/api/parents/{id}</code> · <code class="hash">/trail</code> · <code class="hash">/brief</code>
+        <span class="why2">Return case or patient content. Rejected with 401 without a session.
+        server-side, not a hidden link.</span></div></div>
+  </div>
+  <div class="card">
+    <h2>Verify this case yourself</h2>
+    <p class="mute">This check needs no login. Anyone can run it, including you.</p>
+    <div id="vout">${S.verify&&!S.verify.__error?vblock(S.verify):`<p class="mute">Press verify to call it live.</p>`}</div>
+    <div class="btns">
+      <button class="btn" onclick="doVerify()">Verify now</button>
+      <button class="btn ghost" onclick="probe()">Prove the gate</button>
+      <button class="btn ghost" onclick="copyVerifyCommand(this)">Copy the command</button>
+    </div>
+    <div id="probe"></div>
+  </div>`;
+}
+function vblock(v){
+  return `<div class="pills" style="margin:12px 0">
+    <span class="pill ${v.verified?"p-teal":"p-red"}">${v.verified?"VERIFIED ✓":"TAMPER DETECTED"}</span>
+    <span class="pill p-slate">${v.receipt_count} receipts</span>
+    ${S.verifiedAt?`<span class="pill p-slate">checked ${esc(S.verifiedAt)}</span>`:""}</div>
+    ${v.verified?"":`<p style="color:var(--red);font-size:13.5px">Broken at receipt ${v.broken_at_seq}: ${esc(v.reason)}</p>`}`;
+}
+
+function vOpenOrWait(){
+  // A case named in the URL is not an invitation to pick one.
+  //
+  // The first render() runs synchronously while load() is still in flight, so
+  // every view fell through to the picker and "Open a case" painted for a beat
+  // before the real content replaced it. Every link opened on the wrong screen.
+  //
+  // Bounded by S.booted rather than by the presence of data: if the first load
+  // finishes and there is still nothing, the picker is the honest answer and
+  // this must not spin for ever.
+  if(S.caseId && !S.booted) return `<div class="card"><p class="mute">Opening ${esc(S.caseId)}…</p></div>`;
+  return vOpen();
+}
+
+function vOpen(){
+  return `${synthOnce()}
+  <div class="card">
+    <h2>Open a case</h2>
+    <p class="mute">Every screen is bound to the live API. Seed a synthetic episode, or paste a case id.</p>
+    <div class="btns"><button class="btn" onclick="seed()">Seed a synthetic episode</button></div>
+    <div style="margin-top:14px"><input id="cid" placeholder="or paste a case id" value="${esc(S.caseId||"")}"></div>
+    <div class="btns"><button class="btn ghost" onclick="useCase()">Open it</button></div>
+    <div id="seederr"></div>
+  </div>
+  <div class="card edge-teal">
+    <div class="hyb-bar">
+      <div><h2 style="margin:0;border:0;padding:0">Report symptoms (Hybrid AI intake)</h2>
+        <p class="mute" style="margin:3px 0 0;font-size:13px">Normalise messy Tamil, Tanglish, Hindi, or English locally on-device with Gemini Nano before deterministic triage.</p></div>
+      ${hybridStatusBadge()}
+    </div>
+    ${vHybridIntakeBody()}
+  </div>`;
+}
+function gate(){
+  return `<span class="lock">🔒 Credentialed</span>
+  <div class="card edge-teal">
+    <h2>Clinical view</h2>
+    <p style="font-size:15px;line-height:1.6">The health record holds lab values and diagnoses. It is
+    refused by the server without a credential, and that refusal is what lets the WhatsApp gate
+    promise this data lives somewhere protected.</p>
+    <p class="mute" style="margin-top:10px">A signed link sent to a consented family member is also a
+    credential, and opens this view directly. The demo credential is not a secret; it is published in
+    the README. Secrecy is not what is being shown here; server-side enforcement is.</p>
+    ${S.authError?`<p class="mute" style="color:var(--red-ink);margin-top:10px">${esc(S.authError)}</p>`:""}
+    <div class="btns" style="align-items:center">
+      <div id="gbtn"></div>
+      <button class="btn ghost" onclick="signIn()">Use the demo credential</button></div>
+    <p class="mute" style="margin-top:10px">A Google account only opens this record if it is already
+      one of her family contacts. Signing in proves who you are; it is not permission.</p>
+  </div>`;
+}
+function denied(detail,what){
+  return `<div class="card edge-red">
+    <div class="pills" style="margin-bottom:10px"><span class="pill p-red">401</span></div>
+    <h2 style="color:var(--ink);font-size:17px;text-transform:none;letter-spacing:0">${esc(what)} is credentialed</h2>
+    <p class="mute" style="margin-top:8px">${esc(detail||"")}</p>
+    ${S.authError?`<p class="mute" style="color:var(--red-ink);margin-top:10px">${esc(S.authError)}</p>`:""}
+    <div class="btns" style="align-items:center">
+      <div id="gbtn"></div>
+      <button class="btn ghost" onclick="signIn()">Use the demo credential</button></div>
+    <p class="mute" style="margin-top:10px">A Google account only opens this record if it is already
+      one of her family contacts. Signing in proves who you are; it is not permission.</p>
+  </div>`;
+}
+
+/* ===================== actions ===================== */
+
+// ---- who is signed in, and what that actually permits --------------------
+//
+// The header said "signed in" and nothing else, which answers the smaller
+// half of the question. Signing in says who you are; it does not say whose
+// record you may open, and in this system those are deliberately different
+// facts. The menu shows both, plus the consents this contact actually gave,
+// because a per-purpose consent nobody can look at is a checkbox.
+
+function initials(name){
+  const parts = String(name||"").match(/[A-Za-z0-9]+/g) || [];
+  if(!parts.length) return "?";
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length-1][0] : "")).toUpperCase();
+}
+
+// The contact this session corresponds to, if the record is open and one of
+// its contacts carries the signed-in address. Read from what the server
+// already returned rather than asked for separately.
+function signedInContact(){
+  const email = (S.who?.email || "").trim().toLowerCase();
+  if(!email) return null;
+  return (S.record?.profile?.family_contacts || [])
+    .find(c => (c.email || "").trim().toLowerCase() === email) || null;
+}
+
+const CONSENT_LABEL = {
+  admission_alerts: "Admission alerts", status_updates: "Status updates",
+  billing_updates: "Billing updates", claim_updates: "Claim updates",
+  wellbeing_updates: "Wellbeing updates", outbound_notify: "Care circle messages",
+  recovery_checkins: "Recovery check-ins (hers)",
+};
+
+function renderAccount(){
+  const slot = document.getElementById("acct");
+  if(!slot) return;
+  const signedIn = !!S.token;
+  const credentialed = signedIn || !!S.linkToken;
+  const name = S.who?.name || (signedIn ? "Signed in" : "");
+  const picture = S.who?.picture;
+
+  const face = picture
+    ? `<img src="${esc(picture)}" alt="">`
+    : signedIn ? esc(initials(name)) : S.linkToken ? "◱" : "◔";
+
+  slot.innerHTML = `<button class="avatar ${credentialed?"signed":""}" id="avatarbtn"
+      onclick="toggleAccount(event)" aria-haspopup="true"
+      aria-expanded="${ACCOUNT_OPEN?"true":"false"}"
+      title="${signedIn?esc(name):S.linkToken?"Opened from a link":"Not signed in"}"
+      >${face}</button>
+    ${ACCOUNT_OPEN?accountMenu():""}`;
+}
+
+function accountMenu(){
+  // Asked from here, the panel renders HERE. Nobody is moved to another tab to
+  // sign in, and there is one #gbtn on the page at a time: the in-page panels
+  // stand down while the menu owns it.
+  if(S.signInFor) return `<div class="menu" id="acctmenu">${signInPanel(S.signInFor)}</div>`;
+
+  if(!S.token && !S.linkToken) return `<div class="menu" id="acctmenu">
+    <h4>Not signed in</h4>
+    <p class="mute" style="margin-top:6px">The clinical record needs a credential.</p>
+    <div class="grp"><button class="act"
+      onclick="askSignIn('The clinical record needs a credential.')">Sign in</button></div>
+  </div>`;
+
+  // Opened from a link rather than a session. The holder is credentialed for
+  // exactly this case and nothing else, which is worth saying plainly: it is
+  // why the sharing controls ask them to sign in first.
+  if(!S.token) return `<div class="menu" id="acctmenu">
+    <h4>Opened from a link</h4>
+    <p class="mute" style="margin-top:6px">The link sent to this family opened this
+      case. It is a credential, and it is scoped to this case alone.</p>
+    <div class="grp">
+      <h5>This session</h5>
+      <div class="line"><span>Can open</span><span>${
+        S.record?.profile?.name?esc(S.record.profile.name)+"'s record":"this case"}</span></div>
+      <div class="line"><span>Cannot</span><span>share with a clinician</span></div>
+      <p class="mute" style="margin-top:8px">Sharing creates a new link for someone
+        else to hold, so it needs a signed-in family session.</p>
+    </div>
+    <div class="grp">
+      <button class="act" onclick="copyCase()">Copy case id</button>
+      <button class="act" onclick="askSignIn('Signing in lets you approve payments and share with a clinician.')">Sign in</button>
+    </div>
+  </div>`;
+
+  const contact = signedInContact();
+  const method = S.who?.method === "google" ? "Google account"
+    : S.who?.method === "demo" ? "Demo credential" : "Signed link";
+  const parent = S.record?.profile?.name;
+
+  const consents = Object.entries(contact?.consents || {});
+  const consentBlock = consents.length ? `<div class="grp">
+      <h5>Consents you have given</h5>
+      ${consents.map(([purpose, when]) => `<div class="line">
+        <span>${esc(CONSENT_LABEL[purpose] || purpose.replace(/_/g," "))}</span>
+        <span>${esc(String(when).slice(0,10))}</span></div>`).join("")}
+      <p class="mute" style="margin-top:8px">Recorded per purpose, with the date
+        each was given.</p>
+    </div>` : "";
+
+  return `<div class="menu" id="acctmenu">
+    <div class="who">
+      <div class="avatar signed" style="cursor:default">${
+        S.who?.picture?`<img src="${esc(S.who.picture)}" alt="">`
+                      :esc(initials(S.who?.name))}</div>
+      <div style="min-width:0">
+        <h4>${esc(S.who?.name || "Signed in")}</h4>
+        ${S.who?.email?`<div class="email">${esc(S.who.email)}</div>`:""}
+      </div>
+    </div>
+
+    <div class="grp">
+      <h5>This session</h5>
+      <div class="line"><span>Signed in with</span><span>${esc(method)}</span></div>
+      ${contact?`<div class="line"><span>On the record as</span>
+        <span>${esc(contact.name)} (${esc(contact.relationship)})</span></div>`:""}
+      <div class="line"><span>Can open</span>
+        <span>${parent?esc(parent)+"'s record":"nothing yet"}</span></div>
+      ${contact?.whatsapp_e164?`<div class="line"><span>Messages go to</span>
+        <span>${esc(contact.whatsapp_e164)}</span></div>`:""}
+      <p class="mute" style="margin-top:8px">Signing in proves who you are. What you
+        can open comes from being on this family's contacts.</p>
+    </div>
+
+    ${consentBlock}
+
+    <div class="grp">
+      <button class="act" onclick="copyCase()">Copy case id</button>
+      <button class="act" onclick="S.view='audit';closeAccount();render()">
+        See what has been recorded</button>
+      <button class="act danger" onclick="signOut()">Sign out</button>
+    </div>
+  </div>`;
+}
+
+let ACCOUNT_OPEN = false;
+function toggleAccount(event){
+  event?.stopPropagation();
+  ACCOUNT_OPEN = !ACCOUNT_OPEN;
+  renderAccount();
+}
+function closeAccount(){ ACCOUNT_OPEN = false; renderAccount(); }
+function copyCase(){
+  if(S.caseId) navigator.clipboard?.writeText(S.caseId);
+  closeAccount();
+}
+document.addEventListener("click", e => {
+  if(!ACCOUNT_OPEN) return;
+  if(!e.target.closest("#acct")) closeAccount();
+});
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape" && ACCOUNT_OPEN) closeAccount();
+});
+
+async function signIn(){ S.token="kinguard-demo-family-token"; S.who=null;
+  S.signInFor=null; await load(); }
+
+// Sign in with Google.
+//
+// The browser receives an ID TOKEN and sends it as the bearer. It is not
+// inspected here and it could not be trusted if it were: the server verifies
+// it against Google's published keys with our client id pinned as the
+// audience, and then separately checks that the account is a family contact on
+// this parent. A signature this page checked itself would prove nothing.
+let GOOGLE_DRAWING = false;
+async function signInWithGoogle(){
+  if(GOOGLE_DRAWING) return;
+  GOOGLE_DRAWING = true;
+  try { await drawGoogleButton(); } finally { GOOGLE_DRAWING = false; }
+}
+
+async function drawGoogleButton(){
+  const cfg = S.authConfig || (S.authConfig = await api("/api/auth-config"));
+  const clientId = cfg?.google_client_id;
+  if(!clientId){
+    const slot = document.getElementById("gbtn");
+    if(slot) slot.innerHTML =
+      `<p class="mute">Google sign-in is not configured on this deployment.</p>`;
+    return;
+  }
+  try{
+    await loadGoogleScript();
+    google.accounts.id.initialize({
+      client_id: clientId,
+      callback: async (response) => {
+        S.token = response.credential;
+        S.authError = null; S.signInFor = null;
+        S.who = await api("/api/whoami", {auth:true});
+        await load();
+      },
+    });
+
+    // A RENDERED button, not one-tap. `prompt()` is suppressed by the browser
+    // for reasons that have nothing to do with this app — an exponential
+    // cooldown after a couple of dismissals, third-party cookies switched off —
+    // and a sign-in button that silently does nothing is indistinguishable
+    // from a broken one. The rendered button always opens the popup.
+    const slot = document.getElementById("gbtn");
+    if(slot){
+      slot.innerHTML = "";
+      google.accounts.id.renderButton(slot, {
+        theme: "outline", size: "large", text: "signin_with",
+        shape: "rectangular", width: 260,
+      });
+    }
+  }catch(e){
+    const slot = document.getElementById("gbtn");
+    if(slot) slot.innerHTML =
+      `<p class="mute">Google sign-in could not start: ${esc(String(e))}</p>`;
+  }
+}
+
+function loadGoogleScript(){
+  if(window.google?.accounts?.id) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const tag = document.createElement("script");
+    tag.src = "https://accounts.google.com/gsi/client";
+    tag.async = true;
+    tag.onload = resolve;
+    tag.onerror = () => reject(new Error("the Google script did not load"));
+    document.head.appendChild(tag);
+  });
+}
+
+function signOut(){
+  S.token = null; S.who = null; S.record = null; S.authError = null;
+  try{ google?.accounts?.id?.disableAutoSelect(); }catch{ /* not loaded */ }
+  load();
+}
+async function doVerify(){
+  // Say that it ran. The answer is usually identical to the one already on
+  // screen, so without this the button looks broken: the call goes out, the
+  // chain verifies, and nothing moves. On a recording that reads as a dead
+  // control rather than as a proof.
+  if(!S.caseId) return;
+  const out=document.getElementById("vout");
+  if(out) out.innerHTML=`<p class="mute">Calling the open endpoint, no credential…</p>`;
+  const at=new Date();
+  S.verify=await api(`/api/cases/${S.caseId}/verify`);
+  S.verifiedAt=at.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  render();
+}
+async function probe(){
+  // Two findings, not a transcript. The same two calls are made and the same
+  // two statuses come back; what changed is that a viewer can read the result
+  // without knowing what a curl line is. A red 401 printed raw looks like a
+  // failure to somebody who does not know it was the point.
+  const el=document.getElementById("probe");
+  el.innerHTML=`<p class="mute">Asking for her record with no credential…</p>`;
+  const a=await fetch(`${API}/api/parents/${S.parentId||"unknown"}`);
+  const b=await fetch(`${API}/api/cases/${S.caseId}/verify`);
+  const denied = a.status===401, open = b.status===200;
+  el.innerHTML=`<div class="probe-out">
+    <div class="probe-row">
+      <span class="pill ${denied?"p-teal":"p-red"}">${denied?"refused ✓":`unexpected ${a.status}`}</span>
+      <span class="v long">Her record was asked for without a credential and the server
+      refused it. Not hidden, not obscured. Refused.</span></div>
+    <div class="probe-row">
+      <span class="pill ${open?"p-teal":"p-red"}">${open?"served ✓":`unexpected ${b.status}`}</span>
+      <span class="v long">The proof that nothing was altered was served to the same
+      caller, with no credential at all. It reveals no content.</span></div>
+  </div>`;
+}
+
+function copyVerifyCommand(btn){
+  // Kept, because a judge who wants to check this from their own terminal
+  // should be able to. Behind a button rather than printed on the page: the
+  // claim belongs on screen, the shell command does not.
+  const cmd = `curl -s ${API}/api/cases/${S.caseId||"{case_id}"}/verify`;
+  navigator.clipboard?.writeText(cmd);
+  if(btn){ const was = btn.textContent; btn.textContent = "Copied";
+           setTimeout(()=>{ btn.textContent = was; }, 1600); }
+}
+async function seed(){
+  document.getElementById("seederr").innerHTML=`<p class="mute" style="margin-top:10px">Seeding…</p>`;
+  const s=await (await fetch(`${API}/api/demo/seed`,{method:"POST"})).json();
+  const sig=await (await fetch(`${API}/api/intake-signal`,{method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({parent_id:s.parent_id,channel:"er_desk_webhook",
+      reported_by:"Sacred Heart ER desk",symptoms:["chest pain","sweating"],
+      raw_text:"71F brought in by a neighbour. Chest tightness ~20 min, radiating to left arm, sweating. She says it's probably just gas."})})).json();
+  S.parentId=s.parent_id; S.caseId=sig.signal.case_id; await load();
+}
+function useCase(){ const v=document.getElementById("cid").value.trim(); if(v){S.caseId=v; load();} }
+// Enter submits. Leaving it inert makes the field feel broken.
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && e.target && e.target.id==="cid"){ e.preventDefault(); useCase(); }
+});
+
+// A family member arrives from a WhatsApp alert, on a phone, at 2am. The link
+// names the case; landing them on an empty page and asking them to paste an id
+// would be the product failing at the only moment it matters.
+// A real map of the routing decision. Deliberately NOT a live position: no
+// location is ever collected from the parent, and drawing a moving dot would
+// invent tracking this system does not do and says it does not do.
+let MAP_LOADED = false;
+
+async function drawMap(){
+  const el = document.getElementById("map");
+  if(!el || !S.trail) return;
+  const t = last("triage.decision");
+  if(!t) return;
+
+  const cfg = await api("/api/map-config");
+  if(!cfg?.maps_api_key){
+    el.innerHTML = `<p class="mute" style="padding:16px">${unknown("no maps key is configured")}</p>`;
+    return;
+  }
+
+  if(!MAP_LOADED){
+    await new Promise((ok, fail) => {
+      const sc = document.createElement("script");
+      sc.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(cfg.maps_api_key)}`;
+      sc.onload = ok; sc.onerror = fail;
+      document.head.appendChild(sc);
+    }).catch(()=>{});
+    MAP_LOADED = !!(window.google && window.google.maps);
+  }
+  if(!window.google || !window.google.maps){
+    el.innerHTML = `<p class="mute" style="padding:16px">${unknown("the map could not be loaded")}</p>`;
+    return;
+  }
+
+  const ranked = t.payload.ranked || [];
+  const chosen = t.payload.recommended_hospital_id;
+  const home = t.payload.report || {};
+  const map = new google.maps.Map(el, {
+    center: {lat: home.lat ?? ranked[0]?.lat ?? 8.7642, lng: home.lon ?? 78.14},
+    zoom: 12, mapTypeControl:false, streetViewControl:false, fullscreenControl:false,
+  });
+  const bounds = new google.maps.LatLngBounds();
+
+  if(home.lat && home.lon){
+    const at = {lat: home.lat, lng: home.lon};
+    new google.maps.Marker({map, position: at, title: "Where she was when she messaged",
+      label: {text:"H", color:"#fff"},
+      icon:{path:google.maps.SymbolPath.CIRCLE, scale:12, fillColor:"#1f6f5c",
+            fillOpacity:1, strokeColor:"#fff", strokeWeight:2}});
+    bounds.extend(at);
+  }
+
+  (S.hospitals || []).forEach(h => {
+    const scored = ranked.find(r => r.hospital_id === h.hospital_id);
+    const isChosen = h.hospital_id === chosen;
+    const at = {lat: h.lat, lng: h.lon};
+    new google.maps.Marker({map, position: at, title: h.name,
+      icon:{path:google.maps.SymbolPath.CIRCLE, scale: isChosen ? 11 : 7,
+            fillColor: isChosen ? "#b3261e" : "#94a3b8", fillOpacity:1,
+            strokeColor:"#fff", strokeWeight:2}});
+    const info = new google.maps.InfoWindow({content:
+      `<div style="font:13px system-ui"><b>${esc(h.name)}</b><br>` +
+      (scored ? `${scored.distance_km?.toFixed(1)} km · ` +
+                `${scored.network_match ? "in network" : "not in network"}` : "") +
+      (isChosen ? "<br><b>chosen</b>" : "") + "</div>"});
+    info.open(map, new google.maps.Marker({map, position: at, visible:false}));
+    bounds.extend(at);
+  });
+
+  if(!bounds.isEmpty()) map.fitBounds(bounds, 60);
+}
+
+function caseFromLink(){
+  try { return new URLSearchParams(location.search).get("case"); }
+  catch { return null; }
+}
+
+function tokenFromLink(){
+  try { return new URLSearchParams(location.search).get("t"); }
+  catch { return null; }
+}
+
+async function load(){
+  if(!S.hospitals) S.hospitals = (await api("/api/hospitals"))?.hospitals || [];
+  // Whichever credential is held, the header should say who it belongs to.
+  // /api/whoami never 401s, so this is safe to ask on every load.
+  if(S.token && !S.who) S.who = await api("/api/whoami", {auth:true});
+  if(S.caseId){
+    S.trail=await api(`/api/cases/${S.caseId}/trail`,{auth:true});
+    S.brief=await api(`/api/cases/${S.caseId}/brief`,{auth:true});
+    S.verify=await api(`/api/cases/${S.caseId}/verify`);
+    S.bills=await api(`/api/cases/${S.caseId}/bills`,{auth:true});
+    S.pay=await api(`/api/cases/${S.caseId}/payments`,{auth:true});
+    S.dx=await api(`/api/cases/${S.caseId}/diagnostics`,{auth:true});
+    S.appointments=await api(`/api/cases/${S.caseId}/appointments`,{auth:true});
+    if(!S.parentId && S.brief?.brief) S.parentId=S.brief.brief.parent_id;
+  }
+  if(S.parentId && (S.token || S.linkToken)){
+    S.record=await api(`/api/parents/${S.parentId}`,{auth:true});
+    S.wellbeing=await api(`/api/parents/${S.parentId}/wellbeing`,{auth:true});
+    S.careCircle=await api(`/api/parents/${S.parentId}/care-circle`,{auth:true});
+    S.recovery=await api(`/api/parents/${S.parentId}/recovery`,{auth:true});
+  }
+  S.booted = true;
+  render();
+}
+function render(){
+  const v={now:vNow,brief:vBrief,routing:vRouting,record:vRecord,claim:vClaim,audit:vAudit};
+  document.getElementById("app").innerHTML=v[S.view]();
+  const whoLabel = S.who?.signed_in ? ` · ${S.who.name}`
+    : S.token ? " · signed in"
+    : S.linkToken ? " · opened from a link"
+    : " · not signed in";
+  document.getElementById("sub").textContent=(S.caseId||"no case open")+whoLabel;
+  renderAccount();
+  const hybHdr = document.getElementById("hyb-hdr");
+  if(hybHdr) hybHdr.innerHTML = hybridStatusBadge(true);
+  const b=S.brief?.brief;
+  document.getElementById("stamp").textContent = b?.as_of
+    ? "as of "+new Date(b.as_of).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
+    : "snapshot";
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x.dataset.v===S.view));
+  window.scrollTo(0,0);
+  if(S.view === "routing") drawMap();
+  // The gate is re-rendered on every state change, which destroys the node the
+  // Google button was drawn into. Redraw it whenever the slot is back.
+  if(document.getElementById("gbtn")) signInWithGoogle();
+}
+document.querySelectorAll("nav button").forEach(b=>
+  b.addEventListener("click",()=>{S.view=b.dataset.v; SYNTH_SHOWN=false; render();}));
+
+// Open the case the link names, and show it in the box so it is obvious which
+// episode is on screen rather than appearing by magic.
+(function openLinkedCase(){
+  const linked = caseFromLink();
+  if(!linked) return;
+  S.caseId = linked;
+  S.linkToken = tokenFromLink();
+  // A message about a bill should open on the bill, not on the front page.
+  try {
+    const wanted = new URLSearchParams(location.search).get("view");
+    if(wanted && document.querySelector(`nav button[data-v="${wanted}"]`)) S.view = wanted;
+  } catch { /* no view param, stay on the default */ }
+  const box = document.getElementById("cid");
+  if(box) box.value = linked;
+  load();
+})();
+
+/* ===================== Firebase AI Logic (Hybrid AI) ===================== */
+
+const FB_SDK_VER = "13.4.0";
+const FB_CDN = `https://www.gstatic.com/firebasejs/${FB_SDK_VER}`;
+
+async function initHybridAI(){
+  const h = S.hybrid;
+  try{
+    h.nanoStatus = (window.LanguageModel && typeof window.LanguageModel.availability === "function")
+      ? await window.LanguageModel.availability({expectedOutputs:[{type:"text",languages:["en"]}]})
+      : "unavailable";
+  }catch{ h.nanoStatus = "unavailable"; }
+
+  try{
+    const cfg = await api("/api/firebase-config");
+    h.configured = !!cfg?.configured;
+    h.cloudModel = cfg?.cloud_fallback_model || "gemini-2.5-flash";
+    if(!cfg?.configured){
+      h.ready = false;
+      h.reason = h.nanoStatus === "available"
+        ? "On-device Gemini Nano detected in Chrome; set KINGUARD_FIREBASE_* in .env to enable Firebase AI Logic + cloud fallback."
+        : "Set KINGUARD_FIREBASE_* in .env to enable Firebase AI Logic hybrid inference.";
+      render();
+      return;
+    }
+    const [
+      { initializeApp },
+      { initializeAppCheck, ReCaptchaEnterpriseProvider },
+      { getAI, getGenerativeModel, GoogleAIBackend, InferenceMode },
+    ] = await Promise.all([
+      import(`${FB_CDN}/firebase-app.js`),
+      import(`${FB_CDN}/firebase-app-check.js`),
+      import(`${FB_CDN}/firebase-ai.js`),
+    ]);
+
+    const app = initializeApp(cfg.firebase_config);
+    if(cfg.app_check_debug) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    if(cfg.recaptcha_site_key){
+      initializeAppCheck(app, {
+        provider: new ReCaptchaEnterpriseProvider(cfg.recaptcha_site_key),
+        isTokenAutoRefreshEnabled: true,
+      });
+    }
+    const ai = getAI(app, { backend: new GoogleAIBackend() });
+    h.model = getGenerativeModel(ai, {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      inCloudParams: { model: h.cloudModel },
+    });
+    h.ready = true;
+    h.reason = h.nanoStatus === "available"
+      ? `Firebase AI Logic ready: On-device Gemini Nano preferred, fallback ${h.cloudModel}`
+      : `Firebase AI Logic ready: Cloud fallback (${h.cloudModel}) active (Chrome Nano ${h.nanoStatus})`;
+  }catch(e){
+    h.ready = false;
+    h.reason = `Firebase AI Logic init failed: ${String(e)}`;
+  }
+  render();
+}
+
+function sourceBadge(src){
+  if(src === "on_device") return `<span class="hyb-badge nano">⚡ On-Device (Gemini Nano)</span>`;
+  if(src === "in_cloud") return `<span class="hyb-badge cloud">☁️ Cloud Fallback (${esc(S.hybrid.cloudModel)})</span>`;
+  return `<span class="hyb-badge slate">Deterministic</span>`;
+}
+
+function hybridStatusBadge(compact){
+  const h = S.hybrid;
+  if(h.lastSource){
+    if(h.lastSource === "on_device")
+      return `<span class="hyb-badge nano" title="${esc(h.reason)}">⚡ On-Device Nano</span>`;
+    return `<span class="hyb-badge cloud" title="${esc(h.reason)}">☁️ ${compact?"Cloud Fallback":`Cloud Fallback (${esc(h.cloudModel)})`}</span>`;
+  }
+  if(h.ready && h.nanoStatus === "available")
+    return `<span class="hyb-badge nano" title="${esc(h.reason)}">⚡ Nano Ready</span>`;
+  if(h.ready)
+    return `<span class="hyb-badge cloud" title="${esc(h.reason)}">☁️ ${compact?"Hybrid Fallback Ready":`Hybrid Ready (${esc(h.cloudModel)})`}</span>`;
+  return `<span class="hyb-badge warn" title="${esc(h.reason)}">${compact?"Hybrid Config Needed":"Firebase AI Config Needed"}</span>`;
+}
+
+function setIntakePreset(text){
+  S.hybrid.intakeText = text;
+  S.hybrid.intakeNorm = null;
+  S.hybrid.intakeErr = null;
+  S.hybrid.intakeSubmitted = null;
+  render();
+}
+
+function vHybridIntakeBody(){
+  const h = S.hybrid;
+  const n = h.intakeNorm;
+  return `
+    <textarea id="hyb-intake-ta" class="hyb-ta" oninput="S.hybrid.intakeText=this.value"
+      placeholder="Describe what happened in English, Tamil, Tanglish, or Hindi (e.g. 'amma fell, maarbu vali, sweating, says it is probably gas')">${esc(h.intakeText)}</textarea>
+    <div class="hyb-chips">
+      <button type="button" class="hyb-chipbtn" onclick="setIntakePreset('அம்மாவுக்கு நெஞ்சு வலி, amma chest heavy, sweating ~20 min, she says it is probably just gas. Phone 9876543210.')">
+        Sample: Tanglish + PII chest heaviness</button>
+      <button type="button" class="hyb-chipbtn" onclick="setIntakePreset('maa ko chakkar aa raha hai, had a minor fall near bathroom, BP high')">
+        Sample: Hindi dizziness + fall</button>
+      <button type="button" class="hyb-chipbtn" onclick="setIntakePreset('mild fever 99.8F and cough since morning, eating normally')">
+        Sample: Mild fever + cough</button>
+    </div>
+    <p class="mute" style="margin-top:8px;font-size:12.5px">${esc(h.reason)}</p>
+    <div class="btns">
+      <button class="btn" onclick="runHybridNormalize()" ${h.intakeBusy?"disabled":""}>
+        ${h.intakeBusy?"Normalising…":"1. Normalise locally (Hybrid AI)"}</button>
+      <button class="btn ghost" onclick="submitHybridIntake()" ${h.intakeBusy?"disabled":""}>
+        2. Run deterministic triage &amp; open case</button>
+    </div>
+    ${h.intakeErr?`<div class="strip note" style="margin-top:10px;background:var(--red-bg);color:var(--red-ink)">${esc(h.intakeErr)}</div>`:""}
+    ${n?`<div class="hyb-out">
+      <div class="hyb-bar" style="margin-bottom:8px">
+        <span style="font-weight:800;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em">Advisory normalisation result</span>
+        ${sourceBadge(n.source)}
+      </div>
+      <div class="row"><div class="k">Extracted symptoms</div>
+        <div class="v">${(n.symptoms||[]).length?n.symptoms.map(x=>`<span class="chip">${esc(x)}</span>`).join(" "):"none extracted"}</div></div>
+      ${n.pii_masked_preview?`<div class="row stack"><div class="k">Local PII-masked preview</div>
+        <div class="v">${esc(n.pii_masked_preview)}</div></div>`:""}
+      ${n.advisory_note?`<div class="row stack"><div class="k">Advisory note</div>
+        <div class="v">${esc(n.advisory_note)}</div></div>`:""}
+      <p class="mute" style="margin-top:8px;font-size:12px">
+        Advisory only; never sets severity. Both extracted terms and your raw words are checked by the server's deterministic escalation rules.
+      </p>
+    </div>`:""}
+    ${h.intakeSubmitted?`<div class="strip note" style="margin-top:10px;background:var(--teal-bg);color:var(--teal-ink)">
+      ${esc(h.intakeSubmitted)}</div>`:""}
+  `;
+}
+
+async function runHybridNormalize(){
+  const h = S.hybrid;
+  const text = (document.getElementById("hyb-intake-ta")?.value ?? h.intakeText ?? "").trim();
+  h.intakeText = text;
+  h.intakeErr = null;
+  h.intakeSubmitted = null;
+  if(!text){ h.intakeErr = "Enter symptoms or a message first."; render(); return; }
+  if(!h.ready || !h.model){
+    h.intakeErr = h.reason + " You can still tap step 2 directly to run deterministic triage.";
+    render();
+    return;
+  }
+  h.intakeBusy = true; render();
+  try{
+    const prompt = [
+      "You are an advisory multilingual intake normaliser for elderly care in India.",
+      "Input may be English, Tamil, Tanglish, or Hindi.",
+      "1) Extract short English symptom phrases (e.g. chest pain, chest heaviness, shortness of breath, dizziness, fall, sweating, fever, cough). Max 6.",
+      "2) Produce pii_masked_preview by replacing any phone number, email, Aadhaar, or full street address with [REDACTED].",
+      "3) Provide a 1-sentence factual advisory_note without diagnosing or giving medical advice.",
+      "Return ONLY raw JSON with keys: symptoms (string[]), pii_masked_preview (string), advisory_note (string).",
+      "",
+      "Message: " + text,
+    ].join("\n");
+    const res = await h.model.generateContent(prompt);
+    const src = res.response.inferenceSource || "in_cloud";
+    h.lastSource = src;
+    const raw = (res.response.text() || "").trim();
+    const jm = raw.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jm ? jm[0] : raw);
+    h.intakeNorm = {
+      source: src,
+      symptoms: Array.isArray(parsed.symptoms) ? parsed.symptoms.map(s=>String(s).trim()).filter(Boolean).slice(0,6) : [],
+      pii_masked_preview: String(parsed.pii_masked_preview || ""),
+      advisory_note: String(parsed.advisory_note || ""),
+    };
+  }catch(e){
+    h.intakeErr = `Hybrid AI normalisation failed: ${String(e)}. You can still run deterministic triage directly.`;
+  }finally{
+    h.intakeBusy = false;
+    render();
+  }
+}
+
+async function submitHybridIntake(){
+  const h = S.hybrid;
+  const text = (document.getElementById("hyb-intake-ta")?.value ?? h.intakeText ?? "").trim();
+  h.intakeText = text;
+  h.intakeErr = null;
+  if(!text){ h.intakeErr = "Describe the symptoms before running triage."; render(); return; }
+  if(!navigator.onLine){
+    h.intakeErr = "Offline: your device has no network to open a Cloud Run case right now. If this is an emergency, call 108 immediately. Local AI normalisation stays preserved; tap step 2 again once reconnected.";
+    render();
+    return;
+  }
+  h.intakeBusy = true; render();
+  try{
+    if(!S.parentId){
+      const seeded = await fetch(`${API}/api/demo/seed`, {method:"POST"}).then(r=>r.json());
+      S.parentId = seeded.parent_id;
+    }
+    const symptoms = (h.intakeNorm?.symptoms && h.intakeNorm.symptoms.length) ? h.intakeNorm.symptoms : [];
+    const r = await fetch(`${API}/api/intake`, {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body: JSON.stringify({
+        parent_id: S.parentId,
+        symptoms,
+        free_text: text,
+        reported_by: "family_web_intake",
+        client_normalizer_source: h.intakeNorm?.source || "",
+        client_normalizer_note: h.intakeNorm?.advisory_note || "",
+      }),
+    });
+    const out = await r.json();
+    if(!r.ok) throw new Error(out.detail || `HTTP ${r.status}`);
+    S.caseId = out.case_id;
+    h.intakeSubmitted = `Triaged ${out.severity} -> ${out.recommended_hospital?.name || "hospital selected"} (Case ${out.case_id}).`;
+    S.intakeOpen = false;
+    S.view = "now";
+    await load();
+  }catch(e){
+    h.intakeErr = `Triage request failed: ${String(e)}`;
+    render();
+  }finally{
+    h.intakeBusy = false;
+  }
+}
+
+function vHybridExplainCard(scope){
+  const h = S.hybrid;
+  const active = h.explainScope === scope && h.explainOut;
+  return `<div class="card">
+    <div class="hyb-bar">
+      <div><h2 class="mini" style="margin:0">Plain-language companion (Hybrid AI)</h2>
+        <p class="mute" style="margin:2px 0 0;font-size:12.5px">Explains only what is already on this screen locally on-device (never invents advice).</p></div>
+      ${active?sourceBadge(h.explainSource):hybridStatusBadge(true)}
+    </div>
+    <div class="btns" style="margin-top:6px">
+      <button class="btn ghost" style="min-height:38px;padding:7px 12px;font-size:13px"
+        onclick="runHybridExplain('${esc(scope)}','en')" ${h.explainBusy?"disabled":""}>Explain simply (English)</button>
+      <button class="btn ghost" style="min-height:38px;padding:7px 12px;font-size:13px"
+        onclick="runHybridExplain('${esc(scope)}','ta')" ${h.explainBusy?"disabled":""}>தமிழில் விளக்கவும் (Tamil)</button>
+      <button class="btn ghost" style="min-height:38px;padding:7px 12px;font-size:13px"
+        onclick="runHybridExplain('${esc(scope)}','hi')" ${h.explainBusy?"disabled":""}>हिंदी में समझें (Hindi)</button>
+    </div>
+    ${h.explainBusy && h.explainScope===scope?`<p class="mute" style="margin-top:10px">Generating locally via Firebase AI Logic…</p>`:""}
+    ${h.explainErr && h.explainScope===scope?`<p class="mute" style="margin-top:10px;color:var(--red-ink)">${esc(h.explainErr)}</p>`:""}
+    ${active?`<div class="hyb-out">
+      <div style="white-space:pre-wrap">${esc(h.explainOut)}</div>
+      <p class="mute" style="margin-top:8px;font-size:12px">
+        Derived strictly from the recorded fields shown below via ${h.explainSource==="on_device"?"on-device Gemini Nano":"cloud fallback"}. Not clinical advice.
+      </p>
+    </div>`:""}
+  </div>`;
+}
+
+async function runHybridExplain(scope, lang){
+  const h = S.hybrid;
+  h.explainScope = scope;
+  h.explainLang = lang;
+  h.explainErr = null;
+  h.explainOut = null;
+  if(!h.ready || !h.model){
+    h.explainErr = h.reason;
+    render();
+    return;
+  }
+  let snapshot = null;
+  if(scope === "brief") snapshot = S.brief?.brief;
+  else if(scope === "record") snapshot = {
+    profile: S.record?.profile,
+    documents: (S.record?.documents || []).map(d=>({ kind:d.kind, summary:d.summary, delta:d.delta_vs_baseline, observations:d.observations })),
+  };
+  else if(scope === "claim") snapshot = {
+    bills: (S.bills?.bills || []).map(b=>({ vendor:b.vendor, stated_total_inr:b.stated_total_inr, balance_due_inr:b.balance_due_inr })),
+    estimate: S.bills?.estimate,
+    payments: S.pay ? { paid_inr:S.pay.paid_inr, initiated_unconfirmed_inr:S.pay.initiated_unconfirmed_inr, escalations:S.pay.escalations } : null,
+  };
+  if(!snapshot){ h.explainErr = "Nothing loaded to explain yet."; render(); return; }
+
+  const langLabel = lang === "ta" ? "Tamil (in Tamil script, keeping numbers, medicine names, and INR amounts exact)"
+    : lang === "hi" ? "Hindi (in Devanagari script, keeping numbers, medicine names, and INR amounts exact)"
+    : "clear, calm, plain English";
+
+  h.explainBusy = true; render();
+  try{
+    const prompt = [
+      `Summarise ONLY the recorded facts in the JSON below in ${langLabel} for a worried family member.`,
+      "Strict rules:",
+      "- Never diagnose, never speculate on causes, and never recommend treatment or dosage changes.",
+      "- Preserve every missing field ('not yet known') honestly.",
+      "- Keep under 120 words using 3 short bullet points.",
+      "",
+      JSON.stringify(snapshot).slice(0, 6000),
+    ].join("\n");
+    const res = await h.model.generateContent(prompt);
+    const src = res.response.inferenceSource || "in_cloud";
+    h.lastSource = src;
+    h.explainSource = src;
+    h.explainOut = (res.response.text() || "").trim();
+  }catch(e){
+    h.explainErr = `Could not generate explanation: ${String(e)}`;
+  }finally{
+    h.explainBusy = false;
+    render();
+  }
+}
+
+function vDocUploadCard(){
+  if(!S.token || !S.caseId) return "";
+  const h = S.hybrid;
+  return `<div class="card">
+    <div class="hyb-bar">
+      <div><h2 class="mini" style="margin:0">Upload hospital bill or medical document</h2>
+        <p class="mute" style="margin:2px 0 0;font-size:12.5px">Photographed lab reports, prescriptions, discharge summaries, policies, or bills go onto the private signed record.</p></div>
+    </div>
+    <input id="hyb-doc-file" class="hyb-file" type="file" accept="image/jpeg,image/png,image/webp,image/heic">
+    <div class="btns">
+      <button class="btn" onclick="runDocUpload()" ${h.uploadBusy?"disabled":""}>
+        ${h.uploadBusy?"Uploading &amp; reading…":"Upload &amp; ingest onto case"}</button>
+    </div>
+    ${h.uploadMsg?`<div class="strip note" style="margin-top:10px;background:${h.uploadOk?"var(--teal-bg)":"var(--red-bg)"};color:${h.uploadOk?"var(--teal-ink)":"var(--red-ink)"}">
+      ${esc(h.uploadMsg)}</div>`:""}
+  </div>`;
+}
+
+async function runDocUpload(){
+  const h = S.hybrid;
+  const input = document.getElementById("hyb-doc-file");
+  const file = input?.files?.[0];
+  h.uploadMsg = null;
+  if(!file){ h.uploadMsg = "Choose a JPEG, PNG, or WebP photograph first."; h.uploadOk = false; render(); return; }
+  h.uploadBusy = true; render();
+  try{
+    const fd = new FormData();
+    fd.append("file", file);
+    const r = await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}/documents/ingest`, {
+      method:"POST",
+      headers:{ Authorization:`Bearer ${S.token}` },
+      body: fd,
+    });
+    const out = await r.json();
+    if(!r.ok) throw new Error(out.detail || `HTTP ${r.status}`);
+    h.uploadOk = true;
+    h.uploadMsg = out.kind === "bill"
+      ? `Ingested hospital bill ${out.bill_id} (${out.line_count} line items, INR ${out.payable_total_inr ?? "n/a"}).`
+      : `Ingested ${String(out.kind || "document").replace(/_/g," ")}: ${out.summary || out.document_id}`;
+    await load();
+  }catch(e){
+    h.uploadOk = false;
+    h.uploadMsg = `Not ingested: ${String(e)}`;
+    render();
+  }finally{
+    h.uploadBusy = false;
+  }
+}
+
+initHybridAI();
+render();
+</script>
+</body>
+</html>
