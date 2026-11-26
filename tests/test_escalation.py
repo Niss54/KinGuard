@@ -350,8 +350,8 @@ def test_someone_on_both_lists_is_told_once_and_named_once(monkeypatch):
     """A contact can hold both admission-alert and care-circle consent. They
     are still one human being.
 
-    Sending twice wastes the seconds that matter, and "We have alerted Karthik
-    and Karthik" reads as a broken system at the exact moment it most needs to
+    Sending twice wastes the seconds that matter, and "We have alerted Nishant
+    and Nishant" reads as a broken system at the exact moment it most needs to
     be believed.
     """
     from kinguard.comms import consent, transport
@@ -378,7 +378,7 @@ def test_someone_on_both_lists_is_told_once_and_named_once(monkeypatch):
     )
     # Both consents, one person.
     onboarding_tools.record_family_contact(
-        parent_id=pid, name="Karthik", relationship="son",
+        parent_id=pid, name="Nishant", relationship="son",
         whatsapp_e164="+16692167706", timezone_name="America/Los_Angeles",
         is_primary=True,
         consent_purposes=[consent.ADMISSION_ALERTS, consent.OUTBOUND_NOTIFY],
@@ -388,13 +388,13 @@ def test_someone_on_both_lists_is_told_once_and_named_once(monkeypatch):
     out = handler.handle(entry, pid)
 
     assert out.escalated is True
-    assert out.alerted == ["Karthik"], f"named more than once: {out.alerted}"
+    assert out.alerted == ["Nishant"], f"named more than once: {out.alerted}"
     assert sent.count("+16692167706") == 1, "the same person was messaged twice"
 
     reply = handler.esc.reply_text(
         handler.esc.assess("crushing chest pain"), out.alerted,
     )
-    assert "Karthik and Karthik" not in reply
+    assert "Nishant and Nishant" not in reply
 
 
 def test_a_separate_care_circle_contact_still_gets_their_notice(monkeypatch):
@@ -422,7 +422,7 @@ def test_a_separate_care_circle_contact_still_gets_their_notice(monkeypatch):
         network_hospitals=["Sacred Heart Hospital"], cashless_eligible=True,
     )
     onboarding_tools.record_family_contact(
-        parent_id=pid, name="Karthik", relationship="son", whatsapp_e164="+16692167706",
+        parent_id=pid, name="Nishant", relationship="son", whatsapp_e164="+16692167706",
         timezone_name="America/Los_Angeles", is_primary=True,
         consent_purposes=[consent.ADMISSION_ALERTS],
     )
@@ -435,7 +435,7 @@ def test_a_separate_care_circle_contact_still_gets_their_notice(monkeypatch):
     entry = wb.record(pid, "self-reported", "crushing chest pain, can't breathe")
     out = handler.handle(entry, pid)
 
-    assert sorted(out.alerted) == ["Karthik", "Meena"]
+    assert sorted(out.alerted) == ["Nishant", "Meena"]
     assert sorted(sent) == ["+16692167706", "+919000000101"]
 
 
@@ -463,7 +463,7 @@ def _clinical_case(monkeypatch):
         network_hospitals=["Sacred Heart Hospital"], cashless_eligible=True,
     )
     onboarding_tools.record_family_contact(
-        parent_id=pid, name="Karthik", relationship="son", whatsapp_e164="+16692167706",
+        parent_id=pid, name="Nishant", relationship="son", whatsapp_e164="+16692167706",
         timezone_name="America/Los_Angeles", is_primary=True,
         consent_purposes=[consent.ADMISSION_ALERTS],
     )
@@ -491,7 +491,7 @@ def test_a_mother_who_mentions_a_lab_value_still_gets_her_son_told(monkeypatch):
     )
 
     assert out.escalated is True
-    assert out.alerted == ["Karthik"], "the son was left untold"
+    assert out.alerted == ["Nishant"], "the son was left untold"
     assert out.not_alerted == []
     assert len(sent) == 1
 
@@ -609,12 +609,12 @@ def test_the_model_earns_its_place_on_wording_the_table_misses(model):
 
 def test_the_reply_says_calling_not_answered(model):
     """Twilio returns "queued". Whether anyone picked up is not known here, and
-    "we spoke to Karthik" could stop a family member calling themselves."""
+    "we spoke to Nishant" could stop a family member calling themselves."""
     model([])
     verdict = esc.assess("crushing chest pain, can't breathe")
-    reply = esc.reply_text(verdict, alerted=["Karthik"], called=["Karthik"])
+    reply = esc.reply_text(verdict, alerted=["Nishant"], called=["Nishant"])
 
-    assert "We are also calling Karthik now." in reply
+    assert "We are also calling Nishant now." in reply
     for overclaim in ("answered", "spoke to", "picked up", "is on the way", "reached"):
         assert overclaim not in reply.lower()
 

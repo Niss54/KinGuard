@@ -44,7 +44,7 @@ def household():
         network_hospitals=["Sacred Heart Hospital"], cashless_eligible=True,
     )
     onboarding_tools.record_family_contact(
-        parent_id=pid, name="Karthik", relationship="son", whatsapp_e164="+16692167706",
+        parent_id=pid, name="Nishant", relationship="son", whatsapp_e164="+16692167706",
         timezone_name="America/Los_Angeles", is_primary=True,
         consent_purposes=[consent.ADMISSION_ALERTS],
     )
@@ -94,7 +94,7 @@ def test_both_the_family_and_the_care_circle_are_told(household, sent):
                   source_kind="voice", audio_object="voice/x.ogg"),
         household,
     )
-    assert sorted(out.alerted) == ["Karthik", "Meena"]
+    assert sorted(out.alerted) == ["Nishant", "Meena"]
     assert len(sent) == 2
 
 
@@ -138,7 +138,7 @@ def test_the_family_is_told_to_listen_and_the_neighbour_is_not(household, sent):
     (b"", "very short"),
     (b"x" * 50, "very short"),
     (b"x" * (9 * 1024 * 1024), "too large"),
-])
+], ids=["empty", "short", "too_large"])
 def test_implausible_audio_is_refused_without_calling_a_model(audio, why):
     result = transcribe.transcribe(audio)
     assert result.ok is False

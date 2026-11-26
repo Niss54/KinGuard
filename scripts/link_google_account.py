@@ -7,7 +7,7 @@ that records the link, and without it a perfectly valid Google account gets a
 
     uv run python scripts/link_google_account.py --parent parent-xxxx
     uv run python scripts/link_google_account.py --parent parent-xxxx \
-        --contact Karthik --email you@example.com --apply
+        --contact Nishant --email you@example.com --apply
 """
 
 from __future__ import annotations

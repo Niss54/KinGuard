@@ -55,7 +55,7 @@ def case():
 def _mandate(case_id, parent_id, *, per_bill=100_000, total=400_000, hours=48):
     return grant(parent_id=parent_id, case_id=case_id, payee_vpa=HOSPITAL_VPA,
                  payee_label="Sacred Heart Hospital", per_bill_cap_inr=per_bill,
-                 total_cap_inr=total, hours=hours, granted_by="Karthik")
+                 total_cap_inr=total, hours=hours, granted_by="Nishant")
 
 
 # =========================================================================
@@ -244,7 +244,7 @@ def test_revocation_hard_stops_autonomy(case):
     _mandate(case_id, parent_id)
     consider_bill(case_id=case_id, parent_id=parent_id, bill_id="A", amount_inr=20_000)
 
-    revoke(case_id, revoked_by="Karthik")
+    revoke(case_id, revoked_by="Nishant")
 
     result = consider_bill(case_id=case_id, parent_id=parent_id,
                            bill_id="B", amount_inr=20_000)
@@ -463,7 +463,7 @@ def test_approving_an_amount_does_not_create_a_destination(case):
 
     with pytest.raises(PaymentRefused) as refused:
         approve_escalated(case_id=case_id, parent_id=parent_id, bill_id="IP/1",
-                          amount_inr=10_000, approved_by="Karthik")
+                          amount_inr=10_000, approved_by="Nishant")
     assert "does not create one" in str(refused.value)
 
 
@@ -477,7 +477,7 @@ def test_a_human_can_approve_what_the_enforcer_refused(case):
 
     approved = approve_escalated(case_id=case_id, parent_id=parent_id,
                                  bill_id="IP/1", amount_inr=50_000,
-                                 approved_by="Karthik")
+                                 approved_by="Nishant")
     assert approved["outcome"] == "initiated"
     assert approved["autonomous"] is False
     intent = intent_for(case_id=case_id, payment_id=approved["payment_id"])
@@ -665,7 +665,7 @@ def test_a_bill_escalated_then_approved_shows_resolved(case):
     assert escalations(case_id)[0]["open"] is True
 
     approve_escalated(case_id=case_id, parent_id=parent_id, bill_id="IP/1",
-                      amount_inr=50_000, approved_by="Karthik")
+                      amount_inr=50_000, approved_by="Nishant")
 
     resolved = escalations(case_id)
     assert len(resolved) == 1, "the refusal stays on the record"
@@ -681,7 +681,7 @@ def test_two_bills_are_reconciled_independently(case):
         consider_bill(case_id=case_id, parent_id=parent_id, bill_id=bill_id,
                       amount_inr=50_000)
     approve_escalated(case_id=case_id, parent_id=parent_id, bill_id="IP/1",
-                      amount_inr=50_000, approved_by="Karthik")
+                      amount_inr=50_000, approved_by="Nishant")
 
     by_bill = {e["bill_id"]: e["open"] for e in escalations(case_id)}
     assert by_bill == {"IP/1": False, "IP/2": True}
@@ -2037,7 +2037,7 @@ def _standing(parent_id, *, per_bill=100_000, total=400_000, hours=720):
     return grant_standing(parent_id=parent_id, payee_vpa=HOSPITAL_VPA,
                           payee_label="Sacred Heart Hospital",
                           per_bill_cap_inr=per_bill, total_cap_inr=total,
-                          hours=hours, granted_by="Karthik")
+                          hours=hours, granted_by="Nishant")
 
 
 def _open_another(parent_id):
@@ -2121,7 +2121,7 @@ def test_revoking_the_standing_grant_stops_admissions_already_carrying_it(case):
     _standing(parent_id)
     assert live_for_case(case_id) is not None, "it was never adopted"
 
-    revoke_standing(parent_id, revoked_by="Karthik")
+    revoke_standing(parent_id, revoked_by="Nishant")
 
     result = consider_bill(case_id=case_id, parent_id=parent_id,
                            bill_id="IP/7", amount_inr=10_000)
@@ -2137,7 +2137,7 @@ def test_declining_it_on_one_admission_is_not_undone_by_the_next_question(case):
     _standing(parent_id)
     assert live_for_case(case_id) is not None
 
-    revoke(case_id, revoked_by="Karthik")
+    revoke(case_id, revoked_by="Nishant")
     assert live_for_case(case_id) is None, "it re-adopted itself"
 
     result = consider_bill(case_id=case_id, parent_id=parent_id,

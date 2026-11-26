@@ -25,7 +25,7 @@ from fastapi.testclient import TestClient
 from kinguard import webauth
 from kinguard.tools import onboarding_tools, triage_tools
 
-FAMILY_EMAIL = "karthik@example.com"
+FAMILY_EMAIL = "nishant@example.com"
 STRANGER_EMAIL = "someone.else@example.com"
 # Shaped like a JWT so it takes the Google path rather than being dismissed.
 TOKEN = "header.payload.signature"
@@ -45,7 +45,7 @@ def parent_id() -> str:
         chronic_conditions=["Hypertension"], allergies=["Penicillin"],
     )["profile"]["parent_id"]
     onboarding_tools.record_family_contact(
-        pid, name="Karthik", relationship="son", whatsapp_e164="+14155550142",
+        pid, name="Nishant", relationship="son", whatsapp_e164="+14155550142",
         timezone_name="America/Los_Angeles", is_primary=True,
         consent_purposes=["status_updates"], email=FAMILY_EMAIL)
     return pid
@@ -178,7 +178,7 @@ def test_a_contact_with_no_email_cannot_be_matched(monkeypatch, client):
 
 
 def test_the_match_ignores_case(monkeypatch, client, parent_id):
-    _google_says(monkeypatch, _verified(email="KARTHIK@Example.COM"))
+    _google_says(monkeypatch, _verified(email="NISHANT@Example.COM"))
     assert client.get(f"/api/parents/{parent_id}", headers=_auth()).status_code == 200
 
 

@@ -32,7 +32,7 @@ def parent_id() -> str:
         cashless_eligible=True,
     )
     onboarding_tools.record_family_contact(
-        pid, name="Karthik", relationship="son", whatsapp_e164="+14155550142",
+        pid, name="Nishant", relationship="son", whatsapp_e164="+14155550142",
         timezone_name="America/Los_Angeles", is_primary=True,
         consent_purposes=["admission_alerts", "status_updates"],
     )

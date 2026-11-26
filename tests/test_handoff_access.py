@@ -356,7 +356,7 @@ def _svg_of(qr) -> str:
 # =========================================================================
 
 
-def _contact(parent_id, number, purposes, name="Karthik", primary=True, role=""):
+def _contact(parent_id, number, purposes, name="Nishant", primary=True, role=""):
     onboarding_tools.record_family_contact(
         parent_id, name=name, relationship="son", whatsapp_e164=number,
         timezone_name="America/Los_Angeles", is_primary=primary,

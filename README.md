@@ -1378,6 +1378,10 @@ Then deploy a new revision — running instances do not pick up IAM changes.
 KinGuard reimplements two patterns from our own prior work, written fresh
 during the submission window. See [`DISCLOSURE.md`](DISCLOSURE.md).
 
+## Author
+
+**Nishant Maurya (niss)** — [@Niss54](https://github.com/Niss54)
+
 ## Licence
 
 MIT — see [`LICENSE`](LICENSE).

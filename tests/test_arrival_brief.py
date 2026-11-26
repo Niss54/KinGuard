@@ -36,7 +36,7 @@ def full_parent(bare_parent) -> str:
         cashless_eligible=True,
     )
     onboarding_tools.record_family_contact(
-        bare_parent, name="Karthik", relationship="son", whatsapp_e164="+14155550142",
+        bare_parent, name="Nishant", relationship="son", whatsapp_e164="+14155550142",
         timezone_name="America/Los_Angeles", is_primary=True,
         consent_purposes=["status_updates"],
     )

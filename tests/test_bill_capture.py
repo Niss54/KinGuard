@@ -415,7 +415,7 @@ def registered(parent_id, case_id, monkeypatch):
     """A parent whose WhatsApp number is registered, with an open case."""
     number = "+16692167706"
     onboarding_tools.record_family_contact(
-        parent_id, name="Karthik", relationship="son", whatsapp_e164=number,
+        parent_id, name="Nishant", relationship="son", whatsapp_e164=number,
         timezone_name="America/Los_Angeles", is_primary=True,
         consent_purposes=["status_updates", "inbound_wellbeing"],
     )

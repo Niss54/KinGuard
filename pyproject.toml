@@ -5,7 +5,7 @@ description = "KinGuard: Autonomous eldercare and insurance coordination"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Nishant Maurya"}
+    {name = "Nishant Maurya (niss)", email = "nishantma05@gmail.com"}
 ]
 requires-python = ">=3.12"
 dependencies = [
