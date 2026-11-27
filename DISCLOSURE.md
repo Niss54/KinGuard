@@ -13,7 +13,7 @@ Submitted under the **Firebase Hybrid AI Hackathon** guidelines:
      - Plain-language & multilingual (English/Tamil/Hindi) Arrival, Record, and Claim companion summaries (local on-device in desktop Chrome when Nano supports the language; App-Check-gated Cloud Gemini fallback otherwise).
      - Bedside clinician order & mobility extraction prior to explicit human confirmation (`PREFER_ON_DEVICE` desktop Chrome Nano or Cloud Gemini fallback).
   3. Authenticated web document/bill ingestion endpoint `POST /api/cases/{case_id}/documents/ingest`.
-  4. Server-side hardening: parent-case ownership validation on `POST /api/intake` / `run_triage`, authentication enforcement on ADK session/execution endpoints, atomic compare-and-set (`put_if_absent`) receipt persistence preventing concurrent overwrites, and trusted signer public-key pinning in `verify_chain`.
+  4. Server-side hardening: parent-case ownership validation on `POST /api/intake` / `run_triage`, authentication enforcement on ADK session/execution endpoints, atomic receipt-and-checkpoint persistence preventing concurrent overwrites, and trusted signer public-key pinning in `verify_chain`.
   5. Hybrid AI & security/provenance test coverage (`tests/test_hybrid_ai_surface.py`, `tests/test_security_and_provenance.py`).
 
 ---
@@ -22,9 +22,11 @@ Submitted under the **Firebase Hybrid AI Hackathon** guidelines:
 
 ## Summary
 
-KinGuard is built on top of our earlier August 2026 eldercare prototype (whose August 2026 prototype logs, seeded Thoothukudi hospital snapshot dates, and WhatsApp sandbox verification notes are referenced transparently in [`README.md`](README.md) and [`infra/DEPLOYED.md`](infra/DEPLOYED.md)), plus two design patterns from our earlier projects (`Verigate` and `GenuProof`). Significant new functionality — specifically the Firebase AI Logic hybrid inference tier, Firebase App Check integration, web document/bill ingestion, and the security/provenance fixes listed above — was authored and integrated for this Firebase Hybrid AI Hackathon submission.
+The repository contains an existing eldercare coordination core and Firebase hybrid inference additions. Git timestamps alone do not establish when the original core was authored. Legacy material mentions August 2026, but those dates, deployment anecdotes and original provenance are unverified. They must not be presented as confirmed execution evidence.
 
-> **Deployment disclosure:** The live Cloud Run URL documented in [`infra/DEPLOYED.md`](infra/DEPLOYED.md) (`https://kinguard-37j4eofpwq-el.a.run.app`) reflects the August 2026 prototype deployment configuration and is **not** currently live (`404`); evaluators can reproduce all automated checks and the local dashboard (`http://127.0.0.1:8080/app`) locally offline or self-deploy with `make deploy`.
+The intended submission contributions are Firebase AI Logic/App Check, web document ingestion and the security/integrity fixes listed above. Before submitting, the author must confirm which work was completed during the contest window, identify incorporated third-party work, and confirm ownership. This is a disclosure draft, not proof of those facts.
+
+**Current status:** Credentials, real provider verification and deployment are pending. No active public demo, video publication or Devpost submission is claimed.
 
 ## Pattern 1 — confidence-gated evidence decisioning (STEP_UP)
 
@@ -135,4 +137,4 @@ Standard open-source libraries, unmodified, declared in `pyproject.toml`:
 
 ## Repository history
 
-The git repository was initialized from our August 2026 eldercare prototype codebase and updated with the KinGuard Firebase Hybrid AI Hackathon features, security/provenance fixes, and MIT license. See `git log` for commits.
+Commit history records checkout changes, not original authorship dates. Original core provenance and submission-period contributions require author confirmation. See [submission checklist](docs/SUBMISSION_CHECKLIST.md).

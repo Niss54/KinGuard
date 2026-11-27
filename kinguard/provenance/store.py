@@ -23,6 +23,14 @@ from kinguard.config import settings
 from kinguard.provenance.chain import Receipt
 
 COLLECTION = "kinguard"
+CHAIN_HEAD = "CHAIN_HEAD"
+
+
+def _extends_head(head: dict[str, Any] | None, receipt: dict[str, Any]) -> bool:
+    return (
+        receipt["seq"] == (head["count"] if head else 0)
+        and receipt["prev_hash"] == (head["hash"] if head else "0" * 64)
+    )
 
 
 def _doc_id(pk: str, sk: str) -> str:
@@ -34,6 +42,7 @@ def receipt_sk(seq: int) -> str:
 
 
 class Store(Protocol):
+    def append_receipt_row(self, pk: str, data: dict[str, Any]) -> bool: ...
     def put(self, pk: str, sk: str, data: dict[str, Any]) -> None: ...
     def put_if_absent(self, pk: str, sk: str, data: dict[str, Any]) -> bool: ...
     def get(self, pk: str, sk: str) -> dict[str, Any] | None: ...
@@ -47,6 +56,18 @@ class MemoryStore:
     def __init__(self) -> None:
         self._data: dict[tuple[str, str], dict[str, Any]] = {}
         self._lock = threading.Lock()
+
+    def append_receipt_row(self, pk: str, data: dict[str, Any]) -> bool:
+        """Commit the receipt and its completeness checkpoint under one lock."""
+        sk = receipt_sk(data["seq"])
+        with self._lock:
+            if (pk, sk) in self._data or not _extends_head(self._data.get((pk, CHAIN_HEAD)), data):
+                return False
+            self._data[(pk, sk)] = {**data, "pk": pk, "sk": sk}
+            self._data[(pk, CHAIN_HEAD)] = {
+                "pk": pk, "sk": CHAIN_HEAD, "count": data["seq"] + 1, "hash": data["hash"],
+            }
+            return True
 
     def put(self, pk: str, sk: str, data: dict[str, Any]) -> None:
         with self._lock:
@@ -104,6 +125,29 @@ class FirestoreStore:
             project=project or cfg.project_id,
             database=database or cfg.firestore_database,
         )
+
+    def append_receipt_row(self, pk: str, data: dict[str, Any]) -> bool:
+        """Both documents commit together; a failed transaction writes neither."""
+        from google.cloud import firestore
+
+        collection = self._client.collection(COLLECTION)
+        sk = receipt_sk(data["seq"])
+        receipt_ref = collection.document(_doc_id(pk, sk))
+        head_ref = collection.document(_doc_id(pk, CHAIN_HEAD))
+
+        @firestore.transactional
+        def append(transaction):
+            head = head_ref.get(transaction=transaction)
+            existing = receipt_ref.get(transaction=transaction)
+            if existing.exists or not _extends_head(head.to_dict() if head.exists else None, data):
+                return False
+            transaction.create(receipt_ref, {**data, "pk": pk, "sk": sk})
+            transaction.set(head_ref, {
+                "pk": pk, "sk": CHAIN_HEAD, "count": data["seq"] + 1, "hash": data["hash"],
+            })
+            return True
+
+        return append(self._client.transaction())
 
     def put(self, pk: str, sk: str, data: dict[str, Any]) -> None:
         self._client.collection(COLLECTION).document(_doc_id(pk, sk)).set(
@@ -235,9 +279,8 @@ def save_receipt(
     receipt: Receipt, store: Store | None = None, subject: str = CASE_SUBJECT
 ) -> None:
     store = store or get_store()
-    won = store.put_if_absent(
+    won = store.append_receipt_row(
         f"{subject}{receipt.case_id}",
-        receipt_sk(receipt.seq),
         receipt.model_dump(mode="json"),
     )
     if not won:

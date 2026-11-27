@@ -2305,6 +2305,7 @@ async function seed(){
   S.parentId=s.parent_id; S.caseId=s.case_id; await load();
 }
 function resetCaseScopedState(clearParent = true){
+  S.hybrid.explainRequestId = (S.hybrid.explainRequestId || 0) + 1;
   if(clearParent) S.parentId = null;
   S.trail = null; S.brief = null; S.record = null; S.verify = null;
   S.wellbeing = null; S.careCircle = null; S.recovery = null;
@@ -2592,7 +2593,9 @@ function maskPII(raw){
     .replace(/\b(?:phone|ph|mob|mobile|tel|call)\s*[:#-]?\s*(?:\+?\d[\d\s-]{6,14}\d)/gi, "[REDACTED_PHONE]")
     .replace(/(?:\+\d{1,3}[\s-]?)?\b[6-9]\d{9}\b/g, "[REDACTED_PHONE]")
     .replace(/\b(?:pin(?:code)?|postal)\s*[:#-]?\s*\d{6}\b/gi, "[REDACTED_PIN]")
-    .replace(/\b(?:house|door|flat|apt|plot)\s*(?:no\.?|#)?\s*[A-Z0-9\/-]+(?:\s*,\s*[^,\n.]{2,40}){0,2}/gi, "[REDACTED_ADDRESS]");
+    // Mask only the explicit unit identifier. Comma-separated words may be symptoms.
+    // This is a heuristic preview, not complete anonymisation of free-form addresses.
+    .replace(/\b(?:house|door|flat|apt|plot)\s*(?:no\.?|#)?\s*\d[A-Z0-9\/-]*\b/gi, "[REDACTED_ADDRESS]");
 }
 
 function onIntakeTextInput(val){
@@ -2707,6 +2710,7 @@ async function runHybridNormalize(){
 
 async function submitHybridIntake(){
   const h = S.hybrid;
+  if(!S.token){ h.intakeErr = "Sign in before opening a case."; render(); return; }
   const text = (document.getElementById("hyb-intake-ta")?.value ?? h.intakeText ?? "").trim();
   h.intakeText = text;
   h.intakeErr = null;
@@ -2728,7 +2732,7 @@ async function submitHybridIntake(){
     const symptoms = (normValid && h.intakeNorm.symptoms && h.intakeNorm.symptoms.length) ? h.intakeNorm.symptoms : [];
     const r = await fetch(`${API}/api/intake`, {
       method:"POST",
-      headers:{"content-type":"application/json"},
+      headers:{"content-type":"application/json", "Authorization":`Bearer ${S.token}`},
       body: JSON.stringify({
         parent_id: S.parentId,
         symptoms,
@@ -2783,6 +2787,9 @@ function vHybridExplainCard(scope){
 
 async function runHybridExplain(scope, lang){
   const h = S.hybrid;
+  const caseId = S.caseId;
+  const requestId = h.explainRequestId = (h.explainRequestId || 0) + 1;
+  const isCurrent = () => S.caseId === caseId && h.explainRequestId === requestId;
   h.explainScope = scope;
   h.explainLang = lang;
   h.explainErr = null;
@@ -2827,15 +2834,15 @@ async function runHybridExplain(scope, lang){
       JSON.stringify(snapshot).slice(0, 6000),
     ].join("\n");
     const res = await h.model.generateContent(prompt);
+    if(!isCurrent()) return;
     const src = res.response.inferenceSource || "in_cloud";
     h.lastSource = src;
     h.explainSource = src;
     h.explainOut = (res.response.text() || "").trim();
   }catch(e){
-    h.explainErr = `Could not generate explanation: ${String(e)}`;
+    if(isCurrent()) h.explainErr = `Could not generate explanation: ${String(e)}`;
   }finally{
-    h.explainBusy = false;
-    render();
+    if(isCurrent()){ h.explainBusy = false; render(); }
   }
 }
 

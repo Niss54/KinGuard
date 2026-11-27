@@ -10,21 +10,27 @@ Built for the **[Firebase Hybrid AI Hackathon](https://firebasehybridaihackathon
 
 KinGuard preserves a strict architectural boundary — *"Guardrails that matter are code, not prompts"* — while adding client-side hybrid inference and deterministic PII redaction on top of our existing coordination core (see [`DISCLOSURE.md`](DISCLOSURE.md)):
 
-1. **Client-Side Advisory Intake & Deterministic PII Masking (`/app`):** Before any model or triage request leaves the browser, deterministic client-side redaction (`maskPII`) masks direct identifiers (phone numbers, emails, Aadhaar-like IDs, postal codes/addresses). **Firebase AI Logic (`firebase/ai`, `InferenceMode.PREFER_ON_DEVICE`)** then normalises masked symptom reports — using on-device **Gemini Nano** on supported desktop Chrome for English, and automatically falling back via **Firebase App Check** to Cloud Gemini (`gemini-2.5-flash`) for Tamil/Tanglish/Hindi or browsers without Nano — before deterministic `RED_FLAGS` triage runs on the backend.
+1. **Client-Side Advisory Intake & Deterministic PII Masking (`/app`):** Before any model or triage request leaves the browser, deterministic client-side redaction (`maskPII`) masks direct identifiers (phone numbers, emails, Aadhaar-like IDs, postal codes and explicit numbered units; this heuristic does not anonymise all names or addresses). **Firebase AI Logic (`firebase/ai`, `InferenceMode.PREFER_ON_DEVICE`)** then normalises masked symptom reports — using on-device **Gemini Nano** on supported desktop Chrome for English, and automatically falling back via **Firebase App Check** to Cloud Gemini (`gemini-2.5-flash`) for Tamil/Tanglish/Hindi or browsers without Nano — before deterministic `RED_FLAGS` triage runs on the backend.
 2. **Plain-Language & Multilingual Record Companion (`/app`):** Families can summarise their parent's already-loaded Arrival Brief, Lab Deltas, or Bill Split in plain English, Tamil, or Hindi. On-device execution via Gemini Nano applies only on supported desktop Chrome (Chrome's Prompt API documents English, Spanish, and Japanese — not Tamil or Hindi); Tamil/Hindi requests and mobile/non-Nano browsers route through Firebase AI Logic cloud fallback (`gemini-2.5-flash`) protected by App Check, which transmits the displayed summary snapshot to Firebase/Google Cloud.
 3. **Bedside Clinician Order Extraction (`/handoff/{token}`):** Clinicians can type a quick bedside note and extract structured test orders (`orders_test`, `mobility`) via Firebase AI Logic (`PREFER_ON_DEVICE` desktop Chrome Nano or App-Check-protected Cloud Gemini fallback on mobile/other browsers) before explicit human confirmation onto the provenance chain.
 4. **Web Document & Bill Ingestion (`POST /api/cases/{case_id}/documents/ingest`):** Credentialed family photo upload from `/app` feeding the private GCS + Ed25519 receipt chain.
 
 ---
 
+## Submission status
+
+See [submission checklist](docs/SUBMISSION_CHECKLIST.md). Real provider execution, video publication and Devpost submission remain unverified. Historical deployment/handset anecdotes below are legacy notes, not evidence for this submission. Their dates and ownership must be confirmed by the author before reuse.
+
+PII masking is a limited heuristic. Synthetic data only for the demo. Receipt completeness is checked against an atomically stored count/head checkpoint. This is not external notarisation: an actor who can roll back the entire database, including its checkpoint, is outside this guarantee. Older chains without a checkpoint fail verification and require review against independent evidence, never automatic backfilling from possibly truncated records.
+
 ## Deployment status & trying KinGuard
 
-> **Current deployment status:** Self-hosted / local. The legacy Cloud Run URL (`https://kinguard-37j4eofpwq-el.a.run.app`) and sandbox notes in [`infra/DEPLOYED.md`](infra/DEPLOYED.md) document our earlier August 2026 prototype and deployment template — that Cloud Run endpoint is **not** currently live (`404`). Run locally using the steps below or deploy to your own GCP/Firebase project via `make deploy`.
+> **Current deployment status:** API credentials and deployment are pending. Legacy URLs and handset notes are unverified historical references, not an active demo. Use the local setup below with synthetic data.
 
 **1. Offline, with no Google Cloud project and no model access (recommended verification path):**
 
 ```bash
-make install && make test     # 1,279 tests (in-memory store)
+make install && make test     # automated tests (in-memory store)
 make demo                     # the full spine, no LLM in the loop,
                               # ending with a tamper the chain catches
 ```
@@ -40,7 +46,7 @@ Then open [`http://127.0.0.1:8080/app`](http://127.0.0.1:8080/app), or drive a s
 ```bash
 URL=http://127.0.0.1:8080
 PARENT=$(curl -sX POST "$URL/api/demo/seed?scratch=1" | jq -r .parent_id)
-CASE=$(curl -sX POST $URL/api/intake -H 'content-type: application/json' \
+CASE=$(curl -sX POST $URL/api/intake -H 'Authorization: Bearer kinguard-demo-family-token' -H 'content-type: application/json' \
   -d "{\"parent_id\":\"$PARENT\",\"symptoms\":[\"chest pain\"],\"reported_by\":\"judge\"}" | jq -r .case_id)
 curl -s $URL/api/cases/$CASE/verify | jq
 ```
@@ -142,7 +148,7 @@ This matters more than any feature list, so it comes first.
 - **Wellbeing check-in over inbound WhatsApp**, including voice notes. A voice
   note is stored, transcribed by Gemini in a single call, and read for symptom
   terms — and the audio, not the transcript, is treated as the record. Alerts
-  say "we heard", never "she said". Multilingual and verified from a real
+  say "we heard", never "she said". Multilingual handset verification is pending for this submission. Legacy notes describe a
   handset in Tamil script, transliterated Tamil, Hindi and code-mixed English.
 - **Escalation and care-circle notification.** A recognised red flag opens a
   case, runs triage, alerts the family, and can ring a care-circle contact. It
@@ -1074,7 +1080,7 @@ at the top of this file, which touches nothing that is being filmed.
 
 ```bash
 PARENT=$(curl -sX POST $URL/api/demo/seed | jq -r .parent_id)
-CASE=$(curl -sX POST $URL/api/intake -H 'content-type: application/json' \
+CASE=$(curl -sX POST $URL/api/intake -H 'Authorization: Bearer kinguard-demo-family-token' -H 'content-type: application/json' \
   -d "{\"parent_id\":\"$PARENT\",\"symptoms\":[\"chest pain\"],\"reported_by\":\"neighbour\"}" \
   | jq -r .case_id)
 curl -s $URL/api/cases/$CASE/verify | jq
@@ -1368,7 +1374,7 @@ Then deploy a new revision — running instances do not pick up IAM changes.
 
 ## Disclosure
 
-KinGuard builds on our prior August 2026 eldercare prototype and
+KinGuard builds on an existing eldercare core (original dates unverified) and
 reimplements two prior patterns (`Verigate`, `GenuProof`), combined with
 newly developed Firebase Hybrid AI Logic, App Check, security hardening, and
 provenance guarantees for this submission. See [`DISCLOSURE.md`](DISCLOSURE.md).

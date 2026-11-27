@@ -103,6 +103,7 @@ def test_intake_records_hybrid_normalizer_provenance_without_weakening_red_flags
     # free_text still triggers the deterministic RED_FLAGS escalation floor.
     res = client.post(
         "/api/intake",
+        headers={"Authorization": f"Bearer {DEMO_TOKEN}"},
         json={
             "parent_id": pid,
             "symptoms": [],

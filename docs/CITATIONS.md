@@ -119,10 +119,7 @@ substitute for checking the values before recording.
 
 ## Hackathon facts
 
-Criteria weights (40/30/30), tracks, mandatory stack, prize pools, and bonus
-items are aligned to the official Firebase Hybrid AI Hackathon rules page (https://firebasehybridaihackathon.devpost.com/).
-Re-check them against the live rules page before submission — rules pages get
-edited.
+Use the [current official requirements](https://firebasehybridaihackathon.devpost.com/rules). The earlier 40/30/30 weighting was unsupported and has been removed. Recheck track, prize and stack descriptions on the current contest page.
 
 ## Triage red-flag table
 

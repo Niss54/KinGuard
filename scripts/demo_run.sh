@@ -166,7 +166,7 @@ for r in d['receipts']:
 
 # ---------------------------------------------------------------------------
 beat "BEAT 7 — Tamper (throwaway case; the case above stays valid)"
-THROW=$(curl -s -X POST "$URL/api/intake" -H 'content-type: application/json' \
+THROW=$(curl -s -X POST "${AUTH[@]}" "$URL/api/intake" -H 'content-type: application/json' \
   -d "{\"parent_id\":\"$PARENT\",\"symptoms\":[\"chest pain\"],\"reported_by\":\"tamper-demo\"}" | JQ "d['case_id']")
 uv run python scripts/demo_support.py track "$THROW" "" >/dev/null
 echo "  throwaway case_id: $THROW"

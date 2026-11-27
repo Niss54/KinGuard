@@ -177,9 +177,12 @@ def verify_chain(
 class ReceiptChain:
     """In-memory view of one case's chain, backed by a store."""
 
-    def __init__(self, case_id: str, receipts: list[Receipt] | None = None):
+    def __init__(self, case_id: str, receipts: list[Receipt] | None = None,
+                 checkpoint: dict[str, Any] | None = None, require_checkpoint: bool = False):
         self.case_id = case_id
         self.receipts: list[Receipt] = sorted(receipts or [], key=lambda r: r.seq)
+        self.checkpoint = checkpoint
+        self.require_checkpoint = require_checkpoint
 
     @property
     def head_hash(self) -> str:
@@ -202,4 +205,16 @@ class ReceiptChain:
         return receipt
 
     def verify(self, trusted_public_keys: Iterable[str] | None = None) -> VerificationResult:
-        return verify_chain(self.receipts, trusted_public_keys=trusted_public_keys)
+        result = verify_chain(self.receipts, trusted_public_keys=trusted_public_keys)
+        if not result.ok:
+            return result
+        if self.require_checkpoint and not self.checkpoint:
+            return VerificationResult(ok=False, length=len(self.receipts),
+                                      reason="completeness checkpoint missing; legacy or damaged chain")
+        if self.checkpoint and (
+            self.checkpoint.get("count") != len(self.receipts)
+            or self.checkpoint.get("hash") != self.head_hash
+        ):
+            return VerificationResult(ok=False, length=len(self.receipts),
+                                      reason="chain does not match completeness checkpoint; receipts missing or replaced")
+        return result

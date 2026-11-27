@@ -381,8 +381,11 @@ def intake(
     a neighbour tapping a button — enters the system, and it is the path the
     demo uses when it needs the routing decision to be reproducible.
     """
-    if request.case_id:
-        verify_family_session(raw_request, authorization, case_id_override=request.case_id)
+    verify_family_session(
+        raw_request, authorization,
+        case_id_override=request.case_id,
+        parent_id_override=request.parent_id,
+    )
 
     result = triage_tools.run_triage(
         parent_id=request.parent_id,

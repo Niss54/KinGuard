@@ -386,7 +386,7 @@ def append_receipt(
     """Append one link to a case's chain and persist it atomically.
 
     Serializes in-process writers with a per-chain lock and uses atomic
-    compare-and-set (`put_if_absent`) with reload-and-retry on conflict so
+    receipt-and-checkpoint transactions with reload-and-retry on conflict so
     concurrent writers across threads or processes never overwrite a receipt.
     """
     store = store or get_store()
@@ -408,7 +408,12 @@ def append_receipt(
 def get_chain(
     case_id: str, store: Store | None = None, subject: str = CASE_SUBJECT
 ) -> ReceiptChain:
-    return ReceiptChain(case_id, load_receipts(case_id, store or get_store(), subject))
+    store = store or get_store()
+    # Read the checkpoint first: a concurrent append may cause a conservative
+    # verification failure, never a false completeness claim for an older prefix.
+    checkpoint = store.get(f"{subject}{case_id}", "CHAIN_HEAD")
+    return ReceiptChain(case_id, load_receipts(case_id, store, subject),
+                        checkpoint=checkpoint, require_checkpoint=True)
 
 
 def verify_case(case_id: str, store: Store | None = None) -> VerificationResult:
