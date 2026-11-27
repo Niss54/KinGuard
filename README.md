@@ -19,7 +19,7 @@ KinGuard preserves a strict architectural boundary — *"Guardrails that matter 
 
 ## Submission status
 
-See [submission checklist](docs/SUBMISSION_CHECKLIST.md). Real provider execution, video publication and Devpost submission remain unverified. Historical deployment/handset anecdotes below are legacy notes, not evidence for this submission. Their dates and ownership must be confirmed by the author before reuse.
+See the [submission checklist](docs/SUBMISSION_CHECKLIST.md), [team declaration](docs/TEAM.md) and [GitHub provenance evidence](docs/PROVENANCE_EVIDENCE.md). Real provider execution, video publication and Devpost submission remain unverified. The inherited local project was renamed and modified; its original creation date is unknown.
 
 PII masking is a limited heuristic. Synthetic data only for the demo. Receipt completeness is checked against an atomically stored count/head checkpoint. This is not external notarisation: an actor who can roll back the entire database, including its checkpoint, is outside this guarantee. Older chains without a checkpoint fail verification and require review against independent evidence, never automatic backfilling from possibly truncated records.
 
@@ -53,7 +53,7 @@ curl -s $URL/api/cases/$CASE/verify | jq
 
 `?scratch=1` matters: without it the seed reuses the demo family.
 
-**3. Optional WhatsApp sandbox (self-configured Twilio):** When `KINGUARD_WHATSAPP_MODE=twilio` is configured in your own deployment, sending `START` assigns an isolated synthetic family with three roles on one handset (parent, son, neighbour), while any unknown number sending anything else receives a notice that its message was not stored. (The legacy sandbox number `+1 239 453 5380` belongs to the offline August 2026 prototype and is not active.)
+**3. Optional WhatsApp sandbox (self-configured Twilio):** When `KINGUARD_WHATSAPP_MODE=twilio` is configured in your own deployment, sending `START` assigns an isolated synthetic family with three roles on one handset (parent, son, neighbour), while any unknown number sending anything else receives a notice that its message was not stored. Configure your own sender; no active shared sandbox is provided.
 
 **Local Dashboard:** `http://127.0.0.1:8080/app` ·
 **Health:** `http://127.0.0.1:8080/api/healthz`
@@ -148,8 +148,7 @@ This matters more than any feature list, so it comes first.
 - **Wellbeing check-in over inbound WhatsApp**, including voice notes. A voice
   note is stored, transcribed by Gemini in a single call, and read for symptom
   terms — and the audio, not the transcript, is treated as the record. Alerts
-  say "we heard", never "she said". Multilingual handset verification is pending for this submission. Legacy notes describe a
-  handset in Tamil script, transliterated Tamil, Hindi and code-mixed English.
+  say "we heard", never "she said". Multilingual handset verification is pending for this submission.
 - **Escalation and care-circle notification.** A recognised red flag opens a
   case, runs triage, alerts the family, and can ring a care-circle contact. It
   also **hands the treating team a link without anybody being asked**: a
@@ -372,13 +371,10 @@ This matters more than any feature list, so it comes first.
   dictation proposes nothing and says so; two tests in one sentence are
   reported as two rather than silently reduced to the first.
 
-  **It works in Tamil**, which matters because she is in Thoothukudi and so is
-  her doctor. Verified end to end against the real model and real Places: a
-  Tamil dictation is transcribed in Tamil script, the order is read out of it
-  in Tamil, and a Tamil query returns seven local centres. Code-mixed Tanglish
-  keeps the English clinical terms the clinician actually used. The words are
-  never translated before the search, because translating them would be
-  deciding what was ordered.
+  **Tamil and Tanglish are intended cloud-model inputs.** The implementation
+  preserves the clinician's terms when proposing a diagnostic query. Real-model
+  transcription and Places results remain unverified for this submission;
+  no local Tamil execution or live centre count is claimed.
 
   The family reads it in theirs. A Tamil order shows the English on top and the
   clinician's own words underneath, labelled as translated from them, because a
@@ -508,8 +504,7 @@ This matters more than any feature list, so it comes first.
   ordinary messages have — "6" is an answer to how she slept, "104" is a
   temperature — so it fires only while a request is actually outstanding for
   that parent, within minutes, from a resolved sender, on a message that is
-  digits and nothing else. Verified in the August 2026 prototype
-  and covered by unit tests: the same "123456" is a wellbeing
+  digits and nothing else. Covered by unit tests: the same "123456" is a wellbeing
   check-in with no request open and a code with one. The code is never stored,
   logged or receipted; the chain carries that one was asked for and that the
   request was closed, and nothing that would let anybody replay it.
@@ -611,67 +606,21 @@ This matters more than any feature list, so it comes first.
   property. `robots.txt` is consulted, and a site that has said not to has said
   not to.
 
-  **A real booking has been made and photographed**: DLABS Diagnostics in
-  Thoothukudi, whose page answered "Submission Success, Thanks for getting in
-  touch!" with every field cleared. Both sides of the click are kept — the form
-  filled in, and the centre's answer — so the claim rests on that clinic's own
-  page rather than on this system's account of itself.
+  **Live booking is unverified for this submission.** The implementation
+  records form and response screenshots, and distinguishes a request from a
+  confirmed appointment. Old clinic-success anecdotes are not current evidence.
 
-  It took five attempts, and every failed one was this lane claiming something
-  it had not verified: a form that rejected the submission on a missing email,
-  a page still spinning when it was read, a spinner it did not recognise, and
-  an acknowledgement whose wording it had never heard. Each was found by the
-  screenshot and not by the code, which is the entire argument for keeping one.
+- **Booking confirmation and OTP.** A callback acknowledgement is only
+  `requested`; it is not confirmation. The OTP relay has automated coverage for
+  session parking, inbound routing and one-shot closure. A complete real-provider
+  OTP booking loop remains unverified.
 
-- **No centre found so far can CONFIRM online.** A booking lands as
-  `requested` — the centre has the request and has agreed nothing. The
-  `confirmed` path is implemented and tested and **has never fired against a
-  real centre**, because every centre this system can drive takes a callback and
-  nothing more, so the agreement happens in a phone call KinGuard is not on.
-  The card's pill stays amber for exactly that reason.
-
-  Of eight real Thoothukudi centres, **one** can be booked. One has no website,
-  three are React applications the driver cannot read, two have hostnames that
-  no longer resolve, and one never answers within the wait. Chennai, scouted for
-  comparison, is better built and wants MORE — Anderson requires a package
-  chosen from its own catalogue, which would be this system deciding which test
-  she has. The realistic Indian path is the call bridge, not the form.
-  The OTP relay is complete and verified in every part — the parked session, the
-  delivery, the narrow inbound branch, one-shot closure — and **the full loop
-  has never run end to end**, for the same reason: nothing we can drive has
-  asked for a code.
-
-- **WhatsApp delivery.** The gate decision is real and always has been; the
-  transport behind it is real code with real credentials. Whether a message
-  actually leaves depends on the configured provider, and the system never
-  claims a send that did not happen — a permitted-but-undelivered message is
-  recorded as `comms.not_delivered`, with `sent_at` left unset.
-
-  Two providers are wired, and **Twilio is the working path.** The account is
-  upgraded (`type: Full`), and a freeform `Body` send with no `ContentSid`
-  reaches a real handset — verified in the August 2026 prototype on 2026-08-22, `status:
-  delivered`. This reverses an earlier note in this README: on a Twilio *trial*
-  account freeform sends are rejected with `21654 ContentSid Required` while the
-  Content API that would satisfy it returns `20003 not available on a Trial
-  account`. That catch-22 is real, and upgrading is what resolves it.
-
-  **Meta's Cloud API is implemented but is a dead end on this project.** The
-  test sender registers and connects, the token is valid, and sends still fail
-  `131030 Recipient phone number not in allowed list` — the only UI for that
-  allow-list permanently reports "No phone numbers available for this app",
-  reproduced across two apps in two separate business portfolios. There is no
-  public Graph API for the list. The code stays because it works given a
-  populated allow-list; it is not the path this demo uses.
-
-  One live constraint remains on the working path: the account has **no Content
-  templates**, so freeform sends only succeed inside WhatsApp's 24-hour customer
-  service window. A cold, business-initiated send still fails, and fails
-  honestly as `comms.not_delivered`.
-
-  Neither is general production reach. Sending to an arbitrary number needs Meta
-  business verification and template approval, roughly 10–15 business days.
-  Whatever the transport, **clinical detail never traverses WhatsApp** — that is
-  the classifier's job, and it runs before the transport is reachable at all.
+- **WhatsApp delivery.** Twilio and Meta adapters are implemented. Credentials,
+  account permissions, recipient eligibility and actual delivery must be checked
+  in the configured environment. Neither provider is claimed as a currently
+  working shared demo. A permitted but undelivered message is recorded as
+  `comms.not_delivered`, with `sent_at` unset. The communication gate runs before
+  the transport; provider configuration does not bypass it.
 
 - **Settlement.** The deciding is autonomous; the money is not. Three rails,
   and the receipt records which one carried each payment, because "settled" on
@@ -808,8 +757,8 @@ make serve                    # agent API + ADK dev UI on :8080
 Note that `gcloud auth application-default login` resets ADC's quota project to
 your gcloud default every time you run it, which silently bills and meters every
 Vertex and Firestore call against the wrong project. `.env` pins
-`GOOGLE_CLOUD_QUOTA_PROJECT` so that reset cannot take effect — verified by
-pointing ADC at the wrong project and confirming Vertex still resolves correctly.
+`GOOGLE_CLOUD_QUOTA_PROJECT` to select the intended quota project. Verify this
+in your own environment with `make verify-stack` after configuring credentials.
 
 ---
 
@@ -1370,18 +1319,23 @@ Then deploy a new revision — running instances do not pick up IAM changes.
 
 - [`DISCLOSURE.md`](DISCLOSURE.md) — prior-work and simulated-adjudicator disclosure
 - [`docs/CITATIONS.md`](docs/CITATIONS.md) — every market figure, and its verification status
-- [`infra/DEPLOYED.md`](infra/DEPLOYED.md) — the live environment
+- [`infra/DEPLOYED.md`](infra/DEPLOYED.md) — deployment status and pending setup
 
 ## Disclosure
 
-KinGuard builds on an existing eldercare core (original dates unverified) and
-reimplements two prior patterns (`Verigate`, `GenuProof`), combined with
-newly developed Firebase Hybrid AI Logic, App Check, security hardening, and
-provenance guarantees for this submission. See [`DISCLOSURE.md`](DISCLOSURE.md).
+KinGuard renames and modifies an existing local eldercare project. Its original
+creation date is unknown. The [disclosure](DISCLOSURE.md) distinguishes this
+baseline, earlier related GitHub projects, recorded Firebase additions and
+submission-period hardening. It includes links to the evidence and third-party
+asset inventory.
 
-## Author
+## Team
 
-**Nishant Maurya (niss)** — [@Niss54](https://github.com/Niss54)
+- **Nishant Maurya (niss)**, [@Niss54](https://github.com/Niss54): team representative.
+- **Avika Bansal**: team member.
+
+Both collaborate on and present KinGuard. There are no other team members.
+See the [team and ownership declaration](docs/TEAM.md).
 
 ## Licence
 

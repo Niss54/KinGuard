@@ -1,7 +1,6 @@
 """Ed25519 signing for provenance receipts.
 
-Independently reimplemented for this hackathon. The hash-chain + signed-receipt
-pattern is prior work of ours (GenuProof); see DISCLOSURE.md.
+Prior-work attribution and its evidence limits are recorded in DISCLOSURE.md.
 """
 
 from __future__ import annotations

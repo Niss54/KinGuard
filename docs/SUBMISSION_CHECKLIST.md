@@ -3,13 +3,20 @@
 Passing tests do not establish eligibility or a submitted entry.
 
 - [x] Standard MIT LICENSE exists. Recheck public repository visibility at submission time.
-- [ ] Author confirms ownership, third-party permissions and prior-work provenance. Legacy August dates are unverified.
-- [ ] Author confirms the actual submission-period contributions in DISCLOSURE.md and Devpost.
+- [x] Nishant confirms the project belongs to Nishant Maurya and Avika Bansal, with exactly two team members.
+- [x] Nishant confirms both members are Indian college students, both over 18; Nishant is team representative. See [team declaration](TEAM.md).
+- [x] Disclose the renamed existing local project; its original name/date are not recalled. Do not claim all work was created from scratch in the contest.
+- [x] Document related GitHub projects, comparison limits and commit-linked changes in [provenance evidence](PROVENANCE_EVIDENCE.md) and [DISCLOSURE.md](../DISCLOSURE.md).
+- [x] Inventory dependencies, fonts, design references and demo assets in [third-party materials](THIRD_PARTY.md).
+- [ ] Confirm applicable third-party permissions and disclose any additional copied/adapted material not already identified in the inventory. Unavailable legacy references are explicitly marked unconfirmed.
+- [ ] Include the accurate prior-work disclosure and submission-period change summary in Devpost.
 - [ ] Demonstrate actual Firebase AI Logic on-device inference and cloud fallback with App Check using synthetic data. Record the actual inference source.
 - [ ] Publish a functioning demo publicly on YouTube, at most three minutes, with English narration or subtitles; add its URL to Devpost.
 - [ ] Complete Devpost description, platform, repository URL and testing instructions, and submit. A draft is not a submission.
 - [ ] Provide a free working demo or test build throughout judging. Hosting is encouraged. Test-build installation instructions must work.
-- [ ] Confirm personal/team eligibility, team listing, ownership and applicable permissions. Include no secrets or private patient records.
+- [ ] Both members review the remaining residence, sanctions, employment/conflict and applicable permission conditions in the official rules. The recorded age/student declarations do not certify all eligibility conditions.
+- [ ] Add both team members to the Devpost project and identify Nishant as representative. Repository credits alone do not do this.
+- [ ] Check the final repository, video and testing instructions contain no secrets or private patient records.
 
 Official rules: https://firebasehybridaihackathon.devpost.com/rules
 Deadline: November 30, 2026, 2:00 PM PST (December 1, 2026, 03:30 IST). Recheck the official page before submitting.
