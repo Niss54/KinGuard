@@ -266,7 +266,7 @@ def send(to_e164: str, body: str, mode: str | None = None,
     """Carry an already-permitted message. Never called for a blocked one."""
     # `mode is not None`, not `mode or ...`: an explicit "" must mean off, not
     # silently inherit whatever the ambient environment happens to say.
-    raw = mode if mode is not None else os.getenv("ANBU_WHATSAPP_MODE", "off")
+    raw = mode if mode is not None else os.getenv("KINGUARD_WHATSAPP_MODE", "off")
     chosen = (raw or "off").strip().lower()
     # "sandbox" was the old name for the no-op path; keep it meaning no-op
     # rather than silently starting to send.

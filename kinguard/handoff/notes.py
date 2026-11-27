@@ -55,7 +55,7 @@ from kinguard.webauth import LINK_SECRET_ENV
 # A draft is a scratch value, not a record. It only has to outlive the seconds
 # between hearing the transcript and tapping confirm.
 DRAFT_TTL_SECONDS = 15 * 60
-_DRAFT_DOMAIN = "anbu.handoff.draft.v1"
+_DRAFT_DOMAIN = "kinguard.handoff.draft.v1"
 
 logger = logging.getLogger(__name__)
 

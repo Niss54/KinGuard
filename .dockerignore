@@ -9,3 +9,10 @@ docs/
 *.md
 !README.md
 .env
+.env.local
+.env.*.local
+.local.env
+local.env
+*.pem
+keys/
+service-account*.json

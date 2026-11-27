@@ -55,7 +55,7 @@ CODE_TTL_SECONDS = 15 * 60
 
 # Prefixed so a binding code cannot be replayed as a handoff token or an alert
 # link, and neither of those can be sent in as a binding code.
-_DOMAIN = "anbu.channel.v1"
+_DOMAIN = "kinguard.channel.v1"
 
 _PREFIX = "CLINCHAN#"
 
@@ -113,17 +113,17 @@ def mint_code(case_id: str, now: int | None = None) -> str:
 
     expires = int(now or time.time()) + CODE_TTL_SECONDS
     signature = _sign(case_id, case.handoff_epoch, expires, secret)[:16]
-    return f"ANBU-{case_id}-{case.handoff_epoch}-{expires}-{signature}"
+    return f"KINGUARD-{case_id}-{case.handoff_epoch}-{expires}-{signature}"
 
 
 def looks_like_code(text: str) -> bool:
     """Cheap check before spending anything on an unregistered number's message."""
-    return "ANBU-" in (text or "").upper()
+    return "KINGUARD-" in (text or "").upper()
 
 
 def extract_code(text: str) -> str:
     """The code out of whatever the sender actually typed around it."""
-    match = re.search(r"ANBU-\S+", (text or ""), re.IGNORECASE)
+    match = re.search(r"KINGUARD-\S+", (text or ""), re.IGNORECASE)
     return match.group(0).strip(".,!?") if match else ""
 
 
@@ -137,9 +137,9 @@ def bind(code: str, e164: str, label: str = "",
     """
     secret = _secret()
     parts = (code or "").strip().split("-")
-    # ANBU - case - <id> - epoch - expires - sig, because the case id itself
+    # KINGUARD - case - <id> - epoch - expires - sig, because the case id itself
     # contains a hyphen.
-    if not secret or len(parts) != 6 or parts[0].upper() != "ANBU":
+    if not secret or len(parts) != 6 or parts[0].upper() != "KINGUARD":
         raise HandoffDenied("that code is not valid")
 
     case_id = f"{parts[1]}-{parts[2]}"

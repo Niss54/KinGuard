@@ -45,7 +45,7 @@ def storage_stub(monkeypatch):
 def _reads(monkeypatch, kind, body, **top):
     payload = {"kind": kind, "confidence": 0.95, "unreadable": False,
                "patient_name": "Ashanthi M.", kind: body, **top}
-    monkeypatch.setenv("ANBU_DOC_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DOC_VISION_MODE", "gemini")
     monkeypatch.setattr(dv, "_call_model",
                         lambda image, mime_type: json.dumps(payload))
 
@@ -89,7 +89,7 @@ def test_an_unrecognised_document_is_refused_rather_than_forced(parent_id, monke
 
 
 def test_an_unreadable_photograph_records_nothing(parent_id, monkeypatch):
-    monkeypatch.setenv("ANBU_DOC_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DOC_VISION_MODE", "gemini")
     monkeypatch.setattr(dv, "_call_model", lambda image, mime_type: json.dumps(
         {"kind": "lab_report", "unreadable": True, "unreadable_reason": "too dark"}))
 
@@ -220,7 +220,7 @@ def test_a_document_whose_photograph_cannot_be_stored_is_refused(parent_id, monk
 
     _reads(monkeypatch, "prescription", {"medications": [{"name": "Aspirin"}]})
     monkeypatch.setattr(gcs, "store", lambda filename, data, content_type="": StoredArtifact(
-        stored=False, url=None, detail="ANBU_ARTIFACT_BUCKET is not set"))
+        stored=False, url=None, detail="KINGUARD_ARTIFACT_BUCKET is not set"))
 
     with pytest.raises(DocumentRejected) as rejected:
         ingest_document_image(parent_id, IMAGE, "image/png")
@@ -358,7 +358,7 @@ def test_the_second_send_says_it_is_already_on_file_not_that_it_failed(
 def test_a_document_that_really_is_unreadable_is_not_marked_already_recorded(
         parent_id, monkeypatch):
     """The flag has to separate the two, or it has done nothing."""
-    monkeypatch.setenv("ANBU_DOC_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DOC_VISION_MODE", "gemini")
     monkeypatch.setattr(dv, "_call_model", lambda image, mime_type: json.dumps(
         {"kind": "lab_report", "unreadable": True, "unreadable_reason": "too dark"}))
 

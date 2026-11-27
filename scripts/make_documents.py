@@ -44,7 +44,7 @@ FLAG = (176, 42, 34)
 # is the real one: this is a real project with a named author, and a placeholder
 # on a document that goes on camera is a thing to explain rather than a thing
 # that is true.
-PROPOSER = os.getenv("ANBU_DEMO_FAMILY_NAME") or "Nishant Maurya"
+PROPOSER = os.getenv("KINGUARD_DEMO_FAMILY_NAME") or "Nishant Maurya"
 
 
 def _font(size: int, bold: bool = False):

@@ -30,18 +30,18 @@
 set -euo pipefail
 
 PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-kinguard-hack}"
-LOCATION="${ANBU_SCHEDULER_LOCATION:-asia-south1}"
-JOB="${ANBU_SCHEDULER_JOB:-anbu-recovery-tick}"
+LOCATION="${KINGUARD_SCHEDULER_LOCATION:-asia-south1}"
+JOB="${KINGUARD_SCHEDULER_JOB:-kinguard-recovery-tick}"
 # The second thing outside the service that has to call in. The cashless clock
 # breaches by the passage of time and nothing notices unless something asks, for
 # exactly the same reason the check-in does: Cloud Run holds no timer.
-CLAIMS_JOB="${ANBU_CLAIMS_SCHEDULER_JOB:-anbu-claims-sla-tick}"
-BASE="${ANBU_PUBLIC_BASE_URL:-https://kinguard-37j4eofpwq-el.a.run.app}"
-TOKEN="${ANBU_DEMO_TOKEN:-}"
+CLAIMS_JOB="${KINGUARD_CLAIMS_SCHEDULER_JOB:-kinguard-claims-sla-tick}"
+BASE="${KINGUARD_PUBLIC_BASE_URL:-http://127.0.0.1:8080}"
+TOKEN="${KINGUARD_DEMO_TOKEN:-}"
 # Her timezone, not the presenter's. The gate inside the tick reads the
 # window's own zone, and a job whose clock disagreed with it would be a second
 # opinion about what time it is where she lives.
-ZONE="${ANBU_RECOVERY_TIMEZONE:-Asia/Kolkata}"
+ZONE="${KINGUARD_RECOVERY_TIMEZONE:-Asia/Kolkata}"
 
 SCHEDULE="* * * * *"
 CADENCE="every minute (demo: the check-in lands within a minute of being owed)"
@@ -65,7 +65,7 @@ case "${1:-}" in
 esac
 
 if [[ -z "$TOKEN" ]]; then
-  echo "ANBU_DEMO_TOKEN is not set." >&2
+  echo "KINGUARD_DEMO_TOKEN is not set." >&2
   echo "The tick is credentialed on purpose: it is the trigger for the only" >&2
   echo "outbound channel in this system that points at the parent herself." >&2
   echo "Run: set -a; . ./.env; set +a" >&2

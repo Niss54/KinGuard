@@ -22,7 +22,7 @@ Submitted under the **Firebase Hybrid AI Hackathon** guidelines:
 
 ## Summary
 
-KinGuard is built on top of our own earlier 2026 eldercare prototype (`anbu-care` — whose August 2026 prototype logs, seeded Thoothukudi hospital snapshot dates, and WhatsApp sandbox verification notes are referenced transparently in [`README.md`](README.md) and [`infra/DEPLOYED.md`](infra/DEPLOYED.md)), plus two design patterns from our earlier projects (`Verigate` and `GenuProof`). Significant new functionality — specifically the Firebase AI Logic hybrid inference tier, Firebase App Check integration, web document/bill ingestion, and the security/provenance fixes listed above — was authored and integrated for this Firebase Hybrid AI Hackathon submission.
+KinGuard is built on top of our earlier August 2026 eldercare prototype (whose August 2026 prototype logs, seeded Thoothukudi hospital snapshot dates, and WhatsApp sandbox verification notes are referenced transparently in [`README.md`](README.md) and [`infra/DEPLOYED.md`](infra/DEPLOYED.md)), plus two design patterns from our earlier projects (`Verigate` and `GenuProof`). Significant new functionality — specifically the Firebase AI Logic hybrid inference tier, Firebase App Check integration, web document/bill ingestion, and the security/provenance fixes listed above — was authored and integrated for this Firebase Hybrid AI Hackathon submission.
 
 > **Deployment disclosure:** The live Cloud Run URL documented in [`infra/DEPLOYED.md`](infra/DEPLOYED.md) (`https://kinguard-37j4eofpwq-el.a.run.app`) reflects the August 2026 prototype deployment configuration and is **not** currently live (`404`); evaluators can reproduce all automated checks and the local dashboard (`http://127.0.0.1:8080/app`) locally offline or self-deploy with `make deploy`.
 
@@ -135,4 +135,4 @@ Standard open-source libraries, unmodified, declared in `pyproject.toml`:
 
 ## Repository history
 
-The git repository was initialized from our existing `anbu-care` codebase and updated with the KinGuard Firebase Hybrid AI Hackathon features, security/provenance fixes, and MIT license. See `git log` for commits.
+The git repository was initialized from our August 2026 eldercare prototype codebase and updated with the KinGuard Firebase Hybrid AI Hackathon features, security/provenance fixes, and MIT license. See `git log` for commits.

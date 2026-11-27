@@ -42,9 +42,9 @@ NOW = datetime(2026, 8, 30, 12, 0, tzinfo=UTC)
 
 @pytest.fixture
 def on(monkeypatch):
-    monkeypatch.setenv("ANBU_SANDBOX", "on")
-    monkeypatch.setenv("ANBU_SANDBOX_DAILY_CAP", "3")
-    monkeypatch.setenv("ANBU_SANDBOX_TTL_HOURS", "24")
+    monkeypatch.setenv("KINGUARD_SANDBOX", "on")
+    monkeypatch.setenv("KINGUARD_SANDBOX_DAILY_CAP", "3")
+    monkeypatch.setenv("KINGUARD_SANDBOX_TTL_HOURS", "24")
 
 
 # --- the keyword is the consent moment --------------------------------------
@@ -66,7 +66,7 @@ def test_a_sentence_containing_the_word_is_not_a_request(body):
 
 
 def test_switched_off_provisions_nobody(monkeypatch):
-    monkeypatch.setenv("ANBU_SANDBOX", "off")
+    monkeypatch.setenv("KINGUARD_SANDBOX", "off")
     got = sandbox.provision(VISITOR, now=NOW)
     assert got.provisioned is False
     assert got.status == "disabled"
@@ -211,7 +211,7 @@ def test_a_stranger_saying_start_is_given_a_family(client_and_signed, on):
 
 def test_with_the_sandbox_off_start_is_just_another_stranger(client_and_signed,
                                                             monkeypatch):
-    monkeypatch.setenv("ANBU_SANDBOX", "off")
+    monkeypatch.setenv("KINGUARD_SANDBOX", "off")
     client, signed = client_and_signed
     r = signed(client, {"From": "whatsapp:+15559996666", "Body": "START"})
     assert r.status_code == 200

@@ -22,9 +22,9 @@
 # answered on the spot - and a decided request has no clock left to breach.
 set -euo pipefail
 
-URL="${ANBU_URL:-https://kinguard-37j4eofpwq-el.a.run.app}"
-TOKEN="${ANBU_DEMO_TOKEN:-}"
-PARENT="${ANBU_BREACH_PARENT:-}"
+URL="${KINGUARD_URL:-http://127.0.0.1:8080}"
+TOKEN="${KINGUARD_DEMO_TOKEN:-kinguard-demo-family-token}"
+PARENT="${KINGUARD_BREACH_PARENT:-}"
 MINUTES="${MINUTES:-70}"
 # FORCE=1 says "I cleared the thread". The guard stops a second identical
 # breach message landing beside the first, and only the person who deleted the
@@ -34,17 +34,17 @@ FORCE="${FORCE:-}"
 G="\033[32m"; A="\033[33m"; D="\033[2m"; O="\033[0m"
 
 if [[ -z "$TOKEN" ]]; then
-  echo "ANBU_DEMO_TOKEN is not set. Run: set -a; . ./.env; set +a" >&2
+  echo "KINGUARD_DEMO_TOKEN is not set. Run: set -a; . ./.env; set +a" >&2
   exit 1
 fi
 if [[ -z "$PARENT" ]]; then
-  echo "ANBU_BREACH_PARENT is not set." >&2
+  echo "KINGUARD_BREACH_PARENT is not set." >&2
   echo "Point it at a THROWAWAY parent, never the demo family: this opens a" >&2
   echo "case and puts a regulatory breach on it." >&2
   exit 1
 fi
 
-CASE=$(curl -s --max-time 60 -X POST -H "content-type: application/json" \
+CASE=$(curl -s --max-time 60 -X POST -H "Authorization: Bearer ${TOKEN}" -H "content-type: application/json" \
   -d "{\"parent_id\":\"${PARENT}\",\"channel\":\"er_desk_webhook\",\"raw_text\":\"admitted\",\"reported_by\":\"caregiver\",\"triage_now\":true,\"symptoms\":[\"chest pain\"],\"lat\":8.7642,\"lon\":78.1400}" \
   "${URL}/api/intake-signal" | python3 -c "import json,sys; print(json.load(sys.stdin).get('triage',{}).get('case_id',''))")
 

@@ -15,7 +15,7 @@
 #   FEW AT ONCE  concurrency above one, because /otp has to be served WHILE
 #               /commit is parked waiting for it. Kept small: a browser is
 #               heavy and two real ones at a time is the honest ceiling here.
-#   DRY BY DEFAULT  ANBU_BOOKING_DRYRUN is not set here, and the driver treats
+#   DRY BY DEFAULT  KINGUARD_BOOKING_DRYRUN is not set here, and the driver treats
 #               absent as ON. Booking for real is a deliberate act.
 set -euo pipefail
 
@@ -28,11 +28,11 @@ API_SA="${API_SA:-$(gcloud run services describe kinguard --region "$REGION" \
 # Read off the API rather than off the caller's shell. Every deploy so far
 # passed this empty, so the driver photographed each booking and threw the
 # picture away - the one piece of external evidence the lane produces.
-ANBU_ARTIFACT_BUCKET="${ANBU_ARTIFACT_BUCKET:-$(gcloud run services describe kinguard \
+KINGUARD_ARTIFACT_BUCKET="${KINGUARD_ARTIFACT_BUCKET:-$(gcloud run services describe kinguard \
   --region "$REGION" --project "$PROJECT" \
   --format='value(spec.template.spec.containers[0].env)' 2>/dev/null \
-  | tr ';' '\n' | sed -n "s/.*'name': 'ANBU_ARTIFACT_BUCKET', 'value': '\([^']*\)'.*/\1/p")}"
-echo "artifact bucket: ${ANBU_ARTIFACT_BUCKET:-(none - bookings will have no evidence)}"
+  | tr ';' '\n' | sed -n "s/.*'name': 'KINGUARD_ARTIFACT_BUCKET', 'value': '\([^']*\)'.*/\1/p")}"
+echo "artifact bucket: ${KINGUARD_ARTIFACT_BUCKET:-(none - bookings will have no evidence)}"
 
 cd "$(dirname "$0")/../booker"
 
@@ -46,7 +46,7 @@ gcloud run deploy "$SERVICE" \
   --concurrency 4 \
   --max-instances 1 \
   --timeout 600 \
-  --set-env-vars "ANBU_ARTIFACT_BUCKET=${ANBU_ARTIFACT_BUCKET:-},GOOGLE_CLOUD_PROJECT=${PROJECT},GOOGLE_GENAI_USE_VERTEXAI=True,GOOGLE_CLOUD_LOCATION=${REGION}" \
+  --set-env-vars "KINGUARD_ARTIFACT_BUCKET=${KINGUARD_ARTIFACT_BUCKET:-},GOOGLE_CLOUD_PROJECT=${PROJECT},GOOGLE_GENAI_USE_VERTEXAI=True,GOOGLE_CLOUD_LOCATION=${REGION}" \
   --quiet
 
 BOOKER_URL="$(gcloud run services describe "$SERVICE" --region "$REGION" \
@@ -64,8 +64,8 @@ echo "booker: ${BOOKER_URL}"
 echo
 echo "Point the API at it, still dry:"
 echo "  gcloud run services update kinguard --region ${REGION} --project ${PROJECT} \\"
-echo "    --update-env-vars ANBU_BOOKER_URL=${BOOKER_URL},ANBU_BOOKING_CHANNELS=web"
+echo "    --update-env-vars KINGUARD_BOOKER_URL=${BOOKER_URL},KINGUARD_BOOKING_CHANNELS=web"
 echo
 echo "When you actually want it to book, on the BOOKER:"
 echo "  gcloud run services update ${SERVICE} --region ${REGION} --project ${PROJECT} \\"
-echo "    --update-env-vars ANBU_BOOKING_DRYRUN=0"
+echo "    --update-env-vars KINGUARD_BOOKING_DRYRUN=0"

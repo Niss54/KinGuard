@@ -22,7 +22,7 @@ from typing import Any, Protocol
 from kinguard.config import settings
 from kinguard.provenance.chain import Receipt
 
-COLLECTION = "anbu"
+COLLECTION = "kinguard"
 
 
 def _doc_id(pk: str, sk: str) -> str:

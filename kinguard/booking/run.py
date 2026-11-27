@@ -410,7 +410,7 @@ def _evidence_line(appointment) -> str:
 
     if not appointment.evidence:
         return ""
-    base = os.getenv("ANBU_PUBLIC_BASE_URL", "").rstrip("/")
+    base = os.getenv("KINGUARD_PUBLIC_BASE_URL", "").rstrip("/")
     if not base:
         return ""
 

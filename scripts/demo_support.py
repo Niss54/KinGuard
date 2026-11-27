@@ -16,7 +16,7 @@ import os
 import sys
 from pathlib import Path
 
-STATE = Path(".anbu/demo_state.json")
+STATE = Path(".kinguard/demo_state.json")
 
 
 def _load_state() -> dict:
@@ -133,7 +133,7 @@ def ingest_doc(url: str, parent_id: str, image_path: str, session_id: str = "") 
 
     b64 = base64.b64encode(Path(image_path).read_bytes()).decode()
 
-    token = os.getenv("KINGUARD_DEMO_TOKEN") or os.getenv("ANBU_DEMO_TOKEN", "kinguard-demo-family-token")
+    token = os.getenv("KINGUARD_DEMO_TOKEN") or "kinguard-demo-family-token"
 
     def post(path: str, payload: dict):
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
@@ -187,7 +187,7 @@ def ingest_doc(url: str, parent_id: str, image_path: str, session_id: str = "") 
     docs_count(url, parent_id, reported or "<no ingest_document call>")
 
 
-DEMO_TOKEN = os.getenv("ANBU_DEMO_TOKEN", "anbu-demo-family-token")
+DEMO_TOKEN = os.getenv("KINGUARD_DEMO_TOKEN") or "kinguard-demo-family-token"
 
 
 def docs_count(url: str, parent_id: str, claimed: str = "") -> None:

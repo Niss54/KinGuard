@@ -136,7 +136,7 @@ def available() -> list[Channel]:
     person.
     """
     enabled = [c.strip().lower()
-               for c in os.getenv("ANBU_BOOKING_CHANNELS", "").split(",")
+               for c in os.getenv("KINGUARD_BOOKING_CHANNELS", "").split(",")
                if c.strip()]
     channels: list[Channel] = []
     for name in enabled:

@@ -98,8 +98,8 @@ def build() -> str:
                    "neighbour gets a bedside link, cashless cover is filed against her policy and "
                    "a 1-hour regulatory clock starts.", size=14, fill=MUTE, anchor="start"))
     p.append(label(60, 148, "Firebase AI Logic (PREFER_ON_DEVICE)  ·  Firebase App Check  ·  "
-                   "5 agents on Google ADK  ·  Gemini on Vertex AI  ·  Cloud Run, asia-south1  ·  "
-                   "1,266 tests",
+                   "5 agents on Google ADK  ·  Gemini on Vertex AI  ·  Cloud Run (template), asia-south1  ·  "
+                   "1,279 tests",
                    size=12.5, fill=LINE, anchor="start"))
     p.append(f'<line x1="60" y1="172" x2="{W-60}" y2="172" stroke="{EDGE}" stroke-width="1"/>')
     p.append(label(60, 196, "FULL SYSTEM  ·  HYBRID CLIENT + CLOUD ARCHITECTURE", size=12,

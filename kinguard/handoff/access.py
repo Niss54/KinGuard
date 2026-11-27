@@ -50,7 +50,7 @@ from kinguard.webauth import LINK_SECRET_ENV
 HANDOFF_TTL_SECONDS = 60 * 60
 
 # Prefixed so this signature space cannot overlap the alert-link one.
-_DOMAIN = "anbu.handoff.v1"
+_DOMAIN = "kinguard.handoff.v1"
 
 
 class HandoffDenied(Exception):

@@ -123,7 +123,7 @@ input for the same logical payload, or verification means nothing.
 
 **The signing key must be stable.** An ephemeral key means receipts written
 before a restart stop verifying. `load_signer` mints an ephemeral dev key when
-`ANBU_SIGNING_KEY_B64` is unset and flags it in `/api/healthz`, in
+`KINGUARD_SIGNING_KEY_B64` is unset and flags it in `/api/healthz`, in
 `verify_case_chain`, and in the demo output. `infra/deploy_cloud_run.sh` refuses
 to deploy without one.
 
@@ -151,7 +151,7 @@ cannot silently overwrite an earlier sequence slot. `verify_chain` also pins the
 signer public key (`load_signer().public_key_b64` plus optional rotated keys) rather than
 trusting a self-supplied public key inside a tampered receipt.
 
-A `MemoryStore` implements the same interface, which is why 1,272 tests run with no
+A `MemoryStore` implements the same interface, which is why 1,279 tests run with no
 GCP access at all.
 
 ## Why the TPA is simulated, and says so

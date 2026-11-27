@@ -43,7 +43,7 @@ from pathlib import Path
 
 from PIL import Image, ImageEnhance, ImageFilter
 
-DEFAULT_OUT = Path.home() / "Desktop" / "anbu-demo"
+DEFAULT_OUT = Path.home() / "Desktop" / "kinguard-demo"
 
 
 def photograph(source: Image.Image, rng: random.Random) -> Image.Image:

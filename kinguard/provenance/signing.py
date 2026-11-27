@@ -54,7 +54,7 @@ def load_signer() -> Signer:
         pem = base64.b64decode(encoded)
         key = serialization.load_pem_private_key(pem, password=None)
         if not isinstance(key, ed25519.Ed25519PrivateKey):
-            raise TypeError("ANBU_SIGNING_KEY_B64 must hold an Ed25519 private key")
+            raise TypeError("KINGUARD_SIGNING_KEY_B64 must hold an Ed25519 private key")
         return Signer(private_key=key, ephemeral=False)
     return Signer(private_key=ed25519.Ed25519PrivateKey.generate(), ephemeral=True)
 

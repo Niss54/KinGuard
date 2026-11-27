@@ -24,7 +24,7 @@ SECRET = "test-handoff-secret"
 
 @pytest.fixture(autouse=True)
 def link_secret(monkeypatch):
-    monkeypatch.setenv("ANBU_LINK_SECRET", SECRET)
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", SECRET)
 
 
 @pytest.fixture
@@ -181,7 +181,7 @@ def test_revocation_kills_every_outstanding_link_at_once(client):
 def test_without_a_configured_secret_no_link_can_be_minted(monkeypatch):
     """Fails closed. A shared default would let anyone reading this repo in."""
     case_id = _case(_parent())
-    monkeypatch.delenv("ANBU_LINK_SECRET", raising=False)
+    monkeypatch.delenv("KINGUARD_LINK_SECRET", raising=False)
     with pytest.raises(access.HandoffDenied):
         access.mint(case_id)
 
@@ -292,7 +292,7 @@ def test_the_page_leads_with_allergies_and_says_it_is_not_integrated(client):
 def test_the_mint_response_carries_a_scannable_qr(client, monkeypatch):
     from kinguard.webauth import DEMO_TOKEN
 
-    monkeypatch.setenv("ANBU_PUBLIC_BASE_URL", "https://example.run.app")
+    monkeypatch.setenv("KINGUARD_PUBLIC_BASE_URL", "https://example.run.app")
     case_id = _case(_parent())
 
     body = client.post(f"/api/cases/{case_id}/handoff-link",
@@ -316,7 +316,7 @@ def test_the_qr_encodes_an_absolute_url_when_the_base_is_known(monkeypatch):
 
     from kinguard.server import _qr_svg
 
-    monkeypatch.setenv("ANBU_PUBLIC_BASE_URL", "https://example.run.app")
+    monkeypatch.setenv("KINGUARD_PUBLIC_BASE_URL", "https://example.run.app")
     produced = _qr_svg("/handoff/tok")
 
     absolute = _svg_of(segno.make("https://example.run.app/handoff/tok", error="h"))
@@ -326,7 +326,7 @@ def test_the_qr_encodes_an_absolute_url_when_the_base_is_known(monkeypatch):
     assert produced != relative, "the QR fell back to a path that scans to nothing"
 
     # A trailing slash on the base must not produce a double slash.
-    monkeypatch.setenv("ANBU_PUBLIC_BASE_URL", "https://example.run.app/")
+    monkeypatch.setenv("KINGUARD_PUBLIC_BASE_URL", "https://example.run.app/")
     assert _qr_svg("/handoff/tok") == absolute
 
 
@@ -334,7 +334,7 @@ def test_the_qr_still_renders_without_a_configured_base(monkeypatch):
     """Degrades rather than raising — the link is clickable regardless."""
     from kinguard.server import _qr_svg
 
-    monkeypatch.delenv("ANBU_PUBLIC_BASE_URL", raising=False)
+    monkeypatch.delenv("KINGUARD_PUBLIC_BASE_URL", raising=False)
     assert _qr_svg("/handoff/tok").startswith("<svg")
 
 
@@ -494,7 +494,7 @@ def test_an_escalation_hands_the_treating_team_a_link_with_nobody_asked(monkeypa
     """
     from kinguard.wellbeing import handler
 
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-escalation-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-escalation-secret")
 
     parent_id = _parent()
     onboarding_tools.record_emergency_disclosure_consent(parent_id)
@@ -528,7 +528,7 @@ def test_the_link_it_hands_over_can_record_what_was_ordered(monkeypatch):
     from kinguard.handoff import access
     from kinguard.wellbeing import handler
 
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-escalation-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-escalation-secret")
 
     parent_id = _parent()
     onboarding_tools.record_emergency_disclosure_consent(parent_id)
@@ -554,7 +554,7 @@ def test_no_consent_means_no_link_and_no_crash(monkeypatch):
     could not be minted."""
     from kinguard.wellbeing import handler
 
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-escalation-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-escalation-secret")
 
     parent_id = _parent(consented=False)   # she has not agreed to disclosure
     _contact(parent_id, "+919000000101", ["outbound_notify"],
@@ -596,8 +596,8 @@ def test_the_seeded_care_circle_is_not_the_son(monkeypatch):
     from kinguard import server
     from kinguard.care_circle import notify as circle
 
-    monkeypatch.setenv("ANBU_DEMO_FAMILY_E164", "+16692167706")
-    monkeypatch.setenv("ANBU_DEMO_CIRCLE_E164", "+919000000101")
+    monkeypatch.setenv("KINGUARD_DEMO_FAMILY_E164", "+16692167706")
+    monkeypatch.setenv("KINGUARD_DEMO_CIRCLE_E164", "+919000000101")
 
     with TestClient(server.app) as client:
         parent_id = client.post("/api/demo/seed").json()["parent_id"]
@@ -625,7 +625,7 @@ def test_the_neighbour_can_be_told_and_nothing_else(monkeypatch):
     from kinguard import server
     from kinguard.comms import consent as consent_purposes
 
-    monkeypatch.setenv("ANBU_DEMO_CIRCLE_E164", "+919000000101")
+    monkeypatch.setenv("KINGUARD_DEMO_CIRCLE_E164", "+919000000101")
 
     with TestClient(server.app) as client:
         parent_id = client.post("/api/demo/seed").json()["parent_id"]
@@ -760,7 +760,7 @@ def test_the_handoff_message_carries_a_scannable_code(monkeypatch):
              name="Meena", primary=False)
     case_id = _case(parent_id)
 
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-qr-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-qr-secret")
     stored = []
     from kinguard.comms import storage
 
@@ -793,7 +793,7 @@ def test_the_qr_encodes_the_link_that_was_sent(monkeypatch):
 
     from kinguard.comms import artifacts
 
-    url = "https://anbu.example/handoff/case-x.note.0.1.sig"
+    url = "https://kinguard.example/handoff/case-x.note.0.1.sig"
     png = artifacts.qr_png(url)
 
     # Re-encode and compare: segno is deterministic, so an identical payload
@@ -814,7 +814,7 @@ def test_a_failed_qr_still_sends_the_link(monkeypatch):
     monkeypatch.setattr(storage, "store", lambda *a, **k: storage.StoredArtifact(
         stored=False, url=None, detail="no bucket configured"))
 
-    attachment = whatsapp_tools._attach_qr("https://anbu.example/handoff/x")
+    attachment = whatsapp_tools._attach_qr("https://kinguard.example/handoff/x")
     assert attachment["attached"] is False
     assert "no bucket" in attachment["reason"]
     assert "url" not in attachment, "a media url survived a failed store"
@@ -829,7 +829,7 @@ def test_the_receipt_does_not_carry_the_link_itself(monkeypatch):
                         storage.StoredArtifact(stored=True, url="https://signed/qr.png",
                                                object_name=filename, detail="ok"))
 
-    attachment = whatsapp_tools._attach_qr("https://anbu.example/handoff/SECRET-TOKEN")
+    attachment = whatsapp_tools._attach_qr("https://kinguard.example/handoff/SECRET-TOKEN")
     attachment.pop("url", None)          # as the sender does before recording
     assert "SECRET-TOKEN" not in str(attachment)
     assert attachment["sha256"], "nothing proves which image was sent"
@@ -853,7 +853,7 @@ def test_the_code_goes_to_whoever_is_at_the_bedside_not_to_the_son(monkeypatch):
     _contact(parent_id, "+919000000202", ["outbound_notify"],
              name="Meena", primary=False, role="care_circle")
     case_id = _case(parent_id)
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-qr-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-qr-secret")
 
     to: list[str] = []
     monkeypatch.setattr(whatsapp_tools, "send_family_update",
@@ -875,7 +875,7 @@ def test_with_nobody_named_as_being_there_the_son_is_the_only_hands(monkeypatch)
     _contact(parent_id, "+919000000203", ["outbound_notify"],
              name="Nishant", primary=True)
     case_id = _case(parent_id)
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-qr-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-qr-secret")
 
     to: list[str] = []
     monkeypatch.setattr(whatsapp_tools, "send_family_update",

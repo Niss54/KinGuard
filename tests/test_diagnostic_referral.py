@@ -49,8 +49,8 @@ LIVE_SAMPLE = {
 @pytest.fixture
 def live_places(monkeypatch):
     """Stand in for Places at the one network seam, with its real response shape."""
-    monkeypatch.setenv("ANBU_DIAGNOSTICS_MODE", "places")
-    monkeypatch.setenv("ANBU_PLACES_API_KEY", "test-key")
+    monkeypatch.setenv("KINGUARD_DIAGNOSTICS_MODE", "places")
+    monkeypatch.setenv("KINGUARD_PLACES_API_KEY", "test-key")
 
     calls = []
 
@@ -147,7 +147,7 @@ def test_options_are_refused_without_an_order(case, live_places):
     _parent_id, case_id = case
     with TestClient(app) as client:
         r = client.post(f"/api/cases/{case_id}/diagnostics/dxorder-nope/options",
-                        headers={"Authorization": "Bearer anbu-demo-family-token"})
+                        headers={"Authorization": "Bearer kinguard-demo-family-token"})
     assert r.status_code in (401, 403, 409)
     if r.status_code == 409:
         assert "does not order tests" in r.json()["detail"]
@@ -324,8 +324,8 @@ def test_the_search_uses_the_clinicians_words_unrewritten(case, live_places):
 
 def test_a_failed_search_does_not_become_a_seeded_list(monkeypatch, case):
     """A live label over seeded data is the lie this guards against."""
-    monkeypatch.setenv("ANBU_DIAGNOSTICS_MODE", "places")
-    monkeypatch.setenv("ANBU_PLACES_API_KEY", "test-key")
+    monkeypatch.setenv("KINGUARD_DIAGNOSTICS_MODE", "places")
+    monkeypatch.setenv("KINGUARD_PLACES_API_KEY", "test-key")
 
     def boom(request, timeout=0):
         raise TimeoutError()
@@ -419,8 +419,8 @@ def test_a_far_away_centre_is_never_offered_as_nearby(case, monkeypatch):
     the assay name. Anchoring the query to the city fixed it — but a query
     heuristic is not a guarantee, and this is the guarantee.
     """
-    monkeypatch.setenv("ANBU_DIAGNOSTICS_MODE", "places")
-    monkeypatch.setenv("ANBU_PLACES_API_KEY", "test-key")
+    monkeypatch.setenv("KINGUARD_DIAGNOSTICS_MODE", "places")
+    monkeypatch.setenv("KINGUARD_PLACES_API_KEY", "test-key")
 
     far = {"places": [
         {"id": "ChIJnoida", "displayName": {"text": "Redcliffe Labs - Noida"},
@@ -460,8 +460,8 @@ def test_the_city_anchors_the_query(case, live_places):
 
 def test_nothing_local_is_refused_rather_than_widened(case, monkeypatch):
     """Better no list than a list of places nobody can get her to."""
-    monkeypatch.setenv("ANBU_DIAGNOSTICS_MODE", "places")
-    monkeypatch.setenv("ANBU_PLACES_API_KEY", "test-key")
+    monkeypatch.setenv("KINGUARD_DIAGNOSTICS_MODE", "places")
+    monkeypatch.setenv("KINGUARD_PLACES_API_KEY", "test-key")
     monkeypatch.setattr(places_api, "_search_places",
                         lambda **kw: places_api.SearchResult(
                             ok=True, source="google_places_live",
@@ -644,7 +644,7 @@ def test_an_ordinary_note_starts_no_referral(case, monkeypatch):
     # Set explicitly. Reading it from the ambient environment passed locally,
     # where .env is loaded, and failed in CI where it is not — which is the
     # whole class of bug this project keeps finding the slow way.
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-referral-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-referral-secret")
 
     from kinguard.handoff import access
 
@@ -703,7 +703,7 @@ def test_no_em_dashes_in_anything_a_family_reads():
 def _hears(monkeypatch, payload):
     from kinguard.diagnostics import dictation
 
-    monkeypatch.setenv("ANBU_DICTATION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DICTATION_MODE", "gemini")
     monkeypatch.setattr(dictation, "_call_model", lambda t: json.dumps(payload))
 
 
@@ -757,7 +757,7 @@ def test_a_note_that_orders_nothing_proposes_nothing(monkeypatch):
 def test_a_failed_reading_proposes_nothing_rather_than_guessing(monkeypatch):
     from kinguard.diagnostics import dictation
 
-    monkeypatch.setenv("ANBU_DICTATION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DICTATION_MODE", "gemini")
     monkeypatch.setattr(dictation, "_call_model",
                         lambda t: (_ for _ in ()).throw(TimeoutError()))
     p = dictation.propose_tests("Repeat troponin please.")
@@ -780,8 +780,8 @@ def test_the_draft_endpoint_writes_nothing_and_records_no_order(case, monkeypatc
     from kinguard.handoff import access
 
     _parent_id, case_id = case
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-dictation-secret")
-    monkeypatch.setenv("ANBU_DICTATION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-dictation-secret")
+    monkeypatch.setenv("KINGUARD_DICTATION_MODE", "gemini")
     monkeypatch.setattr(transcribe, "transcribe_dictation",
                         lambda audio, mime: transcribe.Transcript(
                             ok=True, text="Repeat troponin in the morning.",
@@ -892,7 +892,7 @@ def test_a_tamil_order_is_rendered_into_english_for_the_family(monkeypatch):
     this renders her doctor's Tamil for the son reading in Nashville."""
     from kinguard.comms import translate
 
-    monkeypatch.setenv("ANBU_TRANSLATE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSLATE_MODE", "gemini")
     monkeypatch.setattr(translate, "_call_model", lambda p, t: "blood test")
 
     r = translate.render_into_english("ரத்த பரிசோதனை", source_ref="clinician's order")
@@ -909,7 +909,7 @@ def test_an_english_order_costs_no_model_call(monkeypatch):
     from kinguard.comms import translate
 
     called = []
-    monkeypatch.setenv("ANBU_TRANSLATE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSLATE_MODE", "gemini")
     monkeypatch.setattr(translate, "_call_model",
                         lambda p, t: called.append(1) or "x")
 
@@ -924,7 +924,7 @@ def test_a_failed_rendering_shows_the_dictation_rather_than_a_guess(monkeypatch)
     that renames the test."""
     from kinguard.comms import translate
 
-    monkeypatch.setenv("ANBU_TRANSLATE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSLATE_MODE", "gemini")
     monkeypatch.setattr(translate, "_call_model",
                         lambda p, t: (_ for _ in ()).throw(TimeoutError()))
 
@@ -962,7 +962,7 @@ def test_the_record_shows_both_the_english_and_what_was_said():
 
 @pytest.fixture
 def signed(monkeypatch):
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-channel-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-channel-secret")
 
 
 def test_a_bound_handset_needs_a_code_only_the_link_could_make(case, signed):
@@ -1142,14 +1142,14 @@ def test_an_update_that_orders_nothing_is_still_recorded(case, monkeypatch):
     from kinguard.diagnostics import dictation
 
     _parent_id, case_id = case
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-update-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-update-secret")
     monkeypatch.setattr(transcribe, "transcribe_dictation",
                         lambda audio, mime: transcribe.Transcript(
                             ok=True, engine="stub", detail="stub",
                             text="She is stable, chest pain has settled."))
     monkeypatch.setattr(dictation, "_call_model",
                         lambda t: json.dumps({"tests": [], "unclear": False}))
-    monkeypatch.setenv("ANBU_DICTATION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DICTATION_MODE", "gemini")
 
     replies, told = [], []
     monkeypatch.setattr(server, "_reply_to_clinician",
@@ -1221,7 +1221,7 @@ def test_an_update_and_an_order_ride_on_one_note(case, monkeypatch):
     from kinguard.handoff.access import HandoffGrant
 
     parent_id, case_id = case
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-both-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-both-secret")
     grant = HandoffGrant(case_id=case_id, parent_id=parent_id,
                          expires_at=2 ** 31, may_write_note=True)
     out = notes.confirm(grant, "Stable. Repeat troponin in the morning.",
@@ -1274,7 +1274,7 @@ def test_a_family_handset_can_bind_itself_as_the_treating_team(case, signed, mon
 
     Binding was gated on the sender being unregistered. On the son's own phone
     — the phone somebody in the family actually has at the bedside — tapping
-    "connect" filed "ANBU-case-..." as a wellbeing check-in, a symptom report
+    "connect" filed "KINGUARD-case-..." as a wellbeing check-in, a symptom report
     on his mother's record, and bound nothing at all.
 
     Holding a signed code is what authorises this. Being a stranger is not a
@@ -1307,7 +1307,7 @@ def test_a_family_handset_can_bind_itself_as_the_treating_team(case, signed, mon
     # And the code was NOT filed as something she said.
     from kinguard.wellbeing import store as wb
 
-    assert all("ANBU-" not in e.text for e in wb.list_entries(parent_id)), \
+    assert all("KINGUARD-" not in e.text for e in wb.list_entries(parent_id)), \
         "a binding code was recorded as a symptom report"
 
 
@@ -1322,7 +1322,7 @@ def test_a_tamil_note_is_rendered_for_the_family(case, signed, monkeypatch):
     from kinguard.handoff.access import HandoffGrant
 
     parent_id, case_id = case
-    monkeypatch.setenv("ANBU_TRANSLATE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSLATE_MODE", "gemini")
     monkeypatch.setattr(translate, "_call_model",
                         lambda p, t: "Chest pain has settled. Moving her to the ward.")
 
@@ -1345,7 +1345,7 @@ def test_an_english_note_is_not_sent_to_the_model(case, signed, monkeypatch):
 
     parent_id, case_id = case
     called = []
-    monkeypatch.setenv("ANBU_TRANSLATE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSLATE_MODE", "gemini")
     monkeypatch.setattr(translate, "_call_model",
                         lambda p, t: called.append(1) or "x")
 
@@ -1365,7 +1365,7 @@ def test_a_failed_rendering_never_loses_the_note(case, signed, monkeypatch):
     from kinguard.handoff.access import HandoffGrant
 
     parent_id, case_id = case
-    monkeypatch.setenv("ANBU_TRANSLATE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSLATE_MODE", "gemini")
     monkeypatch.setattr(translate, "render_into_english",
                         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("down")))
 

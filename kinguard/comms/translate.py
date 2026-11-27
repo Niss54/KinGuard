@@ -288,7 +288,7 @@ def render_into_english(source_text: str, *, source_ref: str,
 
 
 def _off() -> bool:
-    return os.getenv("ANBU_TRANSLATE_MODE", "gemini").strip().lower() in {
+    return os.getenv("KINGUARD_TRANSLATE_MODE", "gemini").strip().lower() in {
         "off", "none", "false",
     }
 

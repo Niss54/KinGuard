@@ -41,7 +41,7 @@ from kinguard.booking.channels import (
 
 logger = logging.getLogger(__name__)
 
-BOOKER_URL_ENV = "ANBU_BOOKER_URL"
+BOOKER_URL_ENV = "KINGUARD_BOOKER_URL"
 
 # Generous, because a real browser navigating a real Indian lab site over a
 # cold start is not fast. Still finite: a driver that hangs must become a

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2040 1245" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7d8b9c"/></marker></defs><rect width="2040" height="1245" fill="#ffffff"/><text x="60" y="62" text-anchor="start" font-size="34" fill="#0b1c30" font-weight="700">KinGuard</text>
 <text x="60" y="96" text-anchor="start" font-size="16" fill="#0d7d70" font-weight="700">Autonomous eldercare &amp; insurance coordination for NRI families</text>
 <text x="60" y="124" text-anchor="start" font-size="14" fill="#4d5c6e" font-weight="400">One Tamil voice note or Hybrid AI web intake. Her son is told, the neighbour gets a bedside link, cashless cover is filed against her policy and a 1-hour regulatory clock starts.</text>
-<text x="60" y="148" text-anchor="start" font-size="12.5" fill="#7d8b9c" font-weight="400">Firebase AI Logic (PREFER_ON_DEVICE)  ·  Firebase App Check  ·  5 agents on Google ADK  ·  Gemini on Vertex AI  ·  Cloud Run, asia-south1  ·  1,266 tests</text>
+<text x="60" y="148" text-anchor="start" font-size="12.5" fill="#7d8b9c" font-weight="400">Firebase AI Logic (PREFER_ON_DEVICE)  ·  Firebase App Check  ·  5 agents on Google ADK  ·  Gemini on Vertex AI  ·  Cloud Run (template), asia-south1  ·  1,279 tests</text>
 <line x1="60" y1="172" x2="1980" y2="172" stroke="#e3e8f0" stroke-width="1"/>
 <text x="60" y="196" text-anchor="start" font-size="12" fill="#4d5c6e" font-weight="700">FULL SYSTEM  ·  HYBRID CLIENT + CLOUD ARCHITECTURE</text>
 <rect x="690" y="216" width="660" height="92" rx="3" fill="#f6f7fb" stroke="#e3e8f0" stroke-width="1.0"/>

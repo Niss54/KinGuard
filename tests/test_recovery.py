@@ -680,7 +680,7 @@ def _preflight_check(client, name: str) -> dict:
 
 
 def test_the_preflight_says_so_when_no_window_is_open(client, parent, monkeypatch):
-    monkeypatch.setenv("ANBU_DEMO_CIRCLE_E164", MOTHER)
+    monkeypatch.setenv("KINGUARD_DEMO_CIRCLE_E164", MOTHER)
 
     check = _preflight_check(client, "no recovery window already open")
 
@@ -699,7 +699,7 @@ def test_the_preflight_names_a_window_an_earlier_take_left_open(
     the number on screen is wrong.
     """
     _parent_id, case_id, leftover = discharged
-    monkeypatch.setenv("ANBU_DEMO_CIRCLE_E164", MOTHER)
+    monkeypatch.setenv("KINGUARD_DEMO_CIRCLE_E164", MOTHER)
 
     check = _preflight_check(client, "no recovery window already open")
 

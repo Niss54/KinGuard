@@ -205,7 +205,7 @@ def _rendered_bill_message(monkeypatch, case_id, parent_id, *, cashless):
              ("Nursing charges", "nursing", 1_200),
              ("Holter monitoring - 24 hour", "investigation", 4_200),
              ("Ward pharmacy - cardiac drugs", "pharmacy", 12_400)]
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(bill_vision, "_call_model", lambda image, mime: json.dumps({
         "vendor": "Sacred Heart Hospital", "payee_vpa": None,
         "bill_date": "2026-08-22", "stated_total_inr": 27_300,

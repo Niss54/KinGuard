@@ -19,12 +19,12 @@ KinGuard preserves a strict architectural boundary — *"Guardrails that matter 
 
 ## Deployment status & trying KinGuard
 
-> **Current deployment status:** Self-hosted / local. The legacy Cloud Run URL (`https://kinguard-37j4eofpwq-el.a.run.app`) and sandbox notes in [`infra/DEPLOYED.md`](infra/DEPLOYED.md) document our earlier August 2026 prototype (`anbu-care`) and deployment template — that Cloud Run endpoint is **not** currently live (`404`). Run locally using the steps below or deploy to your own GCP/Firebase project via `make deploy`.
+> **Current deployment status:** Self-hosted / local. The legacy Cloud Run URL (`https://kinguard-37j4eofpwq-el.a.run.app`) and sandbox notes in [`infra/DEPLOYED.md`](infra/DEPLOYED.md) document our earlier August 2026 prototype and deployment template — that Cloud Run endpoint is **not** currently live (`404`). Run locally using the steps below or deploy to your own GCP/Firebase project via `make deploy`.
 
 **1. Offline, with no Google Cloud project and no model access (recommended verification path):**
 
 ```bash
-make install && make test     # 1,272 tests (in-memory store)
+make install && make test     # 1,279 tests (in-memory store)
 make demo                     # the full spine, no LLM in the loop,
                               # ending with a tamper the chain catches
 ```
@@ -32,7 +32,7 @@ make demo                     # the full spine, no LLM in the loop,
 **2. Local server + browser dashboard (`/app`) & terminal API test:**
 
 ```bash
-ANBU_STORE_BACKEND=memory uv run uvicorn kinguard.server:app --host 127.0.0.1 --port 8080
+KINGUARD_STORE_BACKEND=memory uv run uvicorn kinguard.server:app --host 127.0.0.1 --port 8080
 ```
 
 Then open [`http://127.0.0.1:8080/app`](http://127.0.0.1:8080/app), or drive a synthetic parent from a terminal with no credential on `/verify`:
@@ -47,7 +47,7 @@ curl -s $URL/api/cases/$CASE/verify | jq
 
 `?scratch=1` matters: without it the seed reuses the demo family.
 
-**3. Optional WhatsApp sandbox (self-configured Twilio):** When `ANBU_WHATSAPP_MODE=twilio` is configured in your own deployment, sending `START` assigns an isolated synthetic family with three roles on one handset (parent, son, neighbour), while any unknown number sending anything else receives a notice that its message was not stored. (The legacy sandbox number `+1 239 453 5380` belongs to the offline August 2026 prototype and is not active.)
+**3. Optional WhatsApp sandbox (self-configured Twilio):** When `KINGUARD_WHATSAPP_MODE=twilio` is configured in your own deployment, sending `START` assigns an isolated synthetic family with three roles on one handset (parent, son, neighbour), while any unknown number sending anything else receives a notice that its message was not stored. (The legacy sandbox number `+1 239 453 5380` belongs to the offline August 2026 prototype and is not active.)
 
 **Local Dashboard:** `http://127.0.0.1:8080/app` ·
 **Health:** `http://127.0.0.1:8080/api/healthz`
@@ -502,7 +502,7 @@ This matters more than any feature list, so it comes first.
   ordinary messages have — "6" is an answer to how she slept, "104" is a
   temperature — so it fires only while a request is actually outstanding for
   that parent, within minutes, from a resolved sender, on a message that is
-  digits and nothing else. Verified in the August 2026 prototype (`anbu-care`)
+  digits and nothing else. Verified in the August 2026 prototype
   and covered by unit tests: the same "123456" is a wellbeing
   check-in with no request open and a code with one. The code is never stored,
   logged or receipted; the chain carries that one was asked for and that the
@@ -597,7 +597,7 @@ This matters more than any feature list, so it comes first.
   say where a hospital is; it cannot say who bills which insurer, or which
   centre can run a cath lab at 2am.
 - **Booking is DRY BY DEFAULT, and that is a deployment switch.** The browser
-  service treats an absent `ANBU_BOOKING_DRYRUN` as on: it navigates, finds the
+  service treats an absent `KINGUARD_BOOKING_DRYRUN` as on: it navigates, finds the
   form, fills every field, captures the cancellation path and reads the page,
   and does not click submit. These are real clinics, and a deploy that books by
   accident wastes a real appointment for a patient who does not exist. Every
@@ -671,7 +671,7 @@ This matters more than any feature list, so it comes first.
   and the receipt records which one carried each payment, because "settled" on
   one is a different claim from "settled" on another.
 
-  | `ANBU_PAYMENT_MODE` | What actually happens |
+  | `KINGUARD_PAYMENT_MODE` | What actually happens |
   |---|---|
   | `razorpay` | A real Razorpay API call in **test mode**. Real payment link, real webhook, test money. A person opens the link — a Payment Link is a *collection* instrument, so a lane ending in one ends with somebody clicking. |
   | `razorpayx` | A real RazorpayX **payout** — money pushed to a beneficiary, nobody present. Needs a provisioned RazorpayX account; the Payouts endpoint 404s without one. Falls back and says so when unconfigured. |
@@ -760,7 +760,7 @@ See [`docs/CITATIONS.md`](docs/CITATIONS.md) before repeating any of them.
 
 ### Testing Firebase AI Logic Hybrid Inference (On-Device + Cloud Fallback)
 
-1. Provision Firebase AI Logic in your Firebase project (`npx firebase-tools init ailogic`, choose Gemini Developer API or Vertex AI), register a Web App, and set `KINGUARD_FIREBASE_*` (or `ANBU_FIREBASE_*`) + `KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY` (or `KINGUARD_FIREBASE_APPCHECK_DEBUG=true` for local/demo debug tokens) in `.env`.
+1. Provision Firebase AI Logic in your Firebase project (`npx firebase-tools init ailogic`, choose Gemini Developer API or Vertex AI), register a Web App, and set `KINGUARD_FIREBASE_*` + `KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY` (or `KINGUARD_FIREBASE_APPCHECK_DEBUG=true` for local/demo debug tokens) in `.env`.
 2. **On-Device Gemini Nano (Chrome Desktop, English):** Enable `chrome://flags/#optimization-guide-on-device-model` (`Enabled BypassPerfRequirement`) and `chrome://flags/#prompt-api-for-gemini-nano` (`Enabled`), verify `Ready` at `chrome://on-device-internals`, open `/app`, and watch English symptom normalisation and plain-language English explanations execute locally with the **`⚡ On-Device (Gemini Nano)`** badge. (Note: Chrome's Prompt API documents `en`, `es`, and `ja`; Tamil/Hindi and mobile browsers use Cloud Fallback below.)
 3. **Automatic Cloud Fallback:** In standard browsers, mobile phones, or non-English (Tamil/Hindi) inputs, `InferenceMode.PREFER_ON_DEVICE` falls back to `gemini-2.5-flash` via Firebase AI Logic + App Check (`☁️ Cloud Fallback`). Client-side deterministic `maskPII()` redacts phone numbers, emails, and IDs before prompt transmission.
 
@@ -768,7 +768,7 @@ See [`docs/CITATIONS.md`](docs/CITATIONS.md) before repeating any of them.
 
 ```bash
 make install          # uv sync --extra dev
-make test             # 1,272 tests, no GCP or model access needed
+make test             # 1,279 tests, no GCP or model access needed
                       # (one more needs a Memory Bank and skips without it)
 make preflight        # the state that silently ruins a recording, in ~2s
 make demo             # the full spine, end to end, with no model in the loop
@@ -815,8 +815,8 @@ Every mandatory requirement, and where it is actually load-bearing.
 |---|---|
 | **Firebase AI Logic (`firebase/ai` v13.4.0)** | Client-side hybrid inference (`InferenceMode.PREFER_ON_DEVICE`, `GoogleAIBackend`) in `/app` and `/handoff/{token}`: runs local **Gemini Nano** on supported desktop Chrome (English) after deterministic client-side PII masking, with automatic fallback to Cloud Gemini (`gemini-2.5-flash`) for Tamil/Tanglish/Hindi, mobile browsers, and non-Nano environments. |
 | **Firebase App Check** | `ReCaptchaEnterpriseProvider` (production) and debug-token initialization (`CustomProvider` fallback when no reCAPTCHA site key is configured) protecting Firebase AI Logic cloud fallback requests. |
-| **Gemini 3.5 (Vertex AI)** | Multimodal reasoning over discharge summaries, lab reports, ECG images and prescriptions; policy-clause matching; and single-call transcription of inbound WhatsApp voice notes. Deployed default is `gemini-3.5-flash`, configurable via `ANBU_MODEL`. |
-| **Gemini 2.5 Flash Lite (Vertex AI)** | The one call that deliberately does *not* use `ANBU_MODEL`. It decides which language she actually writes in, so the next admission's first check-in is not in the language somebody chose for her on a form. A question with a two-letter answer, on a path that already owes her a reply inside fifteen seconds, is the wrong place to spend a frontier model. The answer is checked against a closed list of eight languages before it is believed. |
+| **Gemini 3.5 (Vertex AI)** | Multimodal reasoning over discharge summaries, lab reports, ECG images and prescriptions; policy-clause matching; and single-call transcription of inbound WhatsApp voice notes. Deployed default is `gemini-3.5-flash`, configurable via `KINGUARD_MODEL`. |
+| **Gemini 2.5 Flash Lite (Vertex AI)** | The one call that deliberately does *not* use `KINGUARD_MODEL`. It decides which language she actually writes in, so the next admission's first check-in is not in the language somebody chose for her on a form. A question with a two-letter answer, on a path that already owes her a reply inside fifteen seconds, is the wrong place to spend a frontier model. The answer is checked against a closed list of eight languages before it is believed. |
 | **Google ADK** | Five sub-agents with isolated tool scopes under one coordinator. |
 | **Cloud Run** | Hosts the agent API, the Twilio webhook, and the dashboard. |
 | **Firestore** | Case state and the hash-chained receipt ledger, single-table PK/SK. |
@@ -1090,7 +1090,7 @@ for them.
 
 ```bash
 make keygen                                  # mint a stable Ed25519 key
-export ANBU_SIGNING_KEY_B64=...              # deploy refuses without it
+export KINGUARD_SIGNING_KEY_B64=...              # deploy refuses without it
 make deploy                                  # gcloud run deploy --source .
 ```
 
@@ -1109,7 +1109,7 @@ gcloud auth print-access-token | xargs -I{} curl -s -X POST \
   -d '{"displayName":"kinguard-memory"}' \
   "https://asia-south1-aiplatform.googleapis.com/v1/projects/$PROJECT/locations/asia-south1/reasoningEngines"
 
-export ANBU_MEMORY_BANK=projects/<num>/locations/asia-south1/reasoningEngines/<id>
+export KINGUARD_MEMORY_BANK=projects/<num>/locations/asia-south1/reasoningEngines/<id>
 make deploy
 ```
 
@@ -1123,7 +1123,7 @@ suite forces it empty so a developer's `.env` can never put test data in a real
 bank. To exercise the live cross-session write-and-recall, ask for it by name:
 
 ```bash
-ANBU_MEMORY_BANK_LIVE=projects/.../reasoningEngines/... \
+KINGUARD_MEMORY_BANK_LIVE=projects/.../reasoningEngines/... \
   .venv/bin/python -m pytest -m memory_bank
 ```
 
@@ -1137,7 +1137,7 @@ fails at *query* time, so writes succeed and reads blow up. Create it before the
 first real run:
 
 ```bash
-gcloud firestore indexes composite create --collection-group=anbu \
+gcloud firestore indexes composite create --collection-group=kinguard \
   --field-config=field-path=pk,order=ascending \
   --field-config=field-path=sk,order=ascending
 ```
@@ -1200,7 +1200,7 @@ client (`gcloud alpha iap oauth-clients` is IAP brands, a different thing).
    is the deployed base URL, scheme and host only — no trailing slash, no path.
    **Leave redirect URIs empty**: Google Identity Services returns the ID token
    to the page, so there is no redirect leg to authorise.
-3. `ANBU_GOOGLE_CLIENT_ID=...apps.googleusercontent.com` and redeploy.
+3. `KINGUARD_GOOGLE_CLIENT_ID=...apps.googleusercontent.com` and redeploy.
 
 The client ID is public by design — it identifies the app to Google and ships in
 every page offering the button. The **client secret** in the downloaded JSON is
@@ -1234,7 +1234,7 @@ Cloud Run, inject them as secrets rather than plain env vars.
 
 ```bash
 # From the Meta app dashboard: WhatsApp -> API Setup
-ANBU_WHATSAPP_MODE=meta
+KINGUARD_WHATSAPP_MODE=meta
 WHATSAPP_ACCESS_TOKEN=...        # "Generate access token" — temporary, expires
 WHATSAPP_PHONE_NUMBER_ID=...     # the numeric ID, not the phone number
 WHATSAPP_API_VERSION=v25.0
@@ -1249,7 +1249,7 @@ gate, because there is nothing to classify.
 **Twilio** (the working path; needs a non-trial account, see the honesty note above):
 
 ```bash
-ANBU_WHATSAPP_MODE=twilio
+KINGUARD_WHATSAPP_MODE=twilio
 TWILIO_ACCOUNT_SID=AC...
 TWILIO_API_KEY_SID=SK...         # preferred: revocable without rotating the
 TWILIO_API_KEY_SECRET=...        # account auth token
@@ -1263,11 +1263,11 @@ printf %s "$WHATSAPP_ACCESS_TOKEN" | gcloud secrets create whatsapp-access-token
 
 gcloud run services update kinguard --region=asia-south1 \
   --update-secrets=WHATSAPP_ACCESS_TOKEN=whatsapp-access-token:latest \
-  --update-env-vars=ANBU_WHATSAPP_MODE=meta,WHATSAPP_PHONE_NUMBER_ID=...
+  --update-env-vars=KINGUARD_WHATSAPP_MODE=meta,WHATSAPP_PHONE_NUMBER_ID=...
 ```
 
 The runtime service account needs `roles/secretmanager.secretAccessor` on those
-secrets. `ANBU_WHATSAPP_MODE=off` (the default) records gate decisions and sends
+secrets. `KINGUARD_WHATSAPP_MODE=off` (the default) records gate decisions and sends
 nothing.
 
 ### Runtime service account needs explicit roles
@@ -1368,7 +1368,7 @@ Then deploy a new revision — running instances do not pick up IAM changes.
 
 ## Disclosure
 
-KinGuard builds on our prior August 2026 eldercare prototype (`anbu-care`) and
+KinGuard builds on our prior August 2026 eldercare prototype and
 reimplements two prior patterns (`Verigate`, `GenuProof`), combined with
 newly developed Firebase Hybrid AI Logic, App Check, security hardening, and
 provenance guarantees for this submission. See [`DISCLOSURE.md`](DISCLOSURE.md).

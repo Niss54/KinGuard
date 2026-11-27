@@ -33,7 +33,7 @@ class StoredArtifact:
 
 
 def _bucket_name() -> str | None:
-    value = os.getenv("ANBU_ARTIFACT_BUCKET")
+    value = os.getenv("KINGUARD_ARTIFACT_BUCKET")
     return value.strip() if value else None
 
 
@@ -81,12 +81,12 @@ def _signing_kwargs() -> dict[str, str]:
 
     email = getattr(creds, "service_account_email", None)
     if not email or email == "default" or "@" not in email:
-        email = _runtime_service_account() or os.getenv("ANBU_SIGNER_SERVICE_ACCOUNT")
+        email = _runtime_service_account() or os.getenv("KINGUARD_SIGNER_SERVICE_ACCOUNT")
 
     if not email:
         raise RuntimeError(
             "cannot sign: credentials carry no private key and no signer address could "
-            "be resolved. Set ANBU_SIGNER_SERVICE_ACCOUNT to a service account you may "
+            "be resolved. Set KINGUARD_SIGNER_SERVICE_ACCOUNT to a service account you may "
             "impersonate."
         )
     if not creds.valid:
@@ -105,7 +105,7 @@ def store(filename: str, data: bytes, content_type: str = "application/pdf") -> 
     if not bucket_name:
         return StoredArtifact(
             stored=False, url=None,
-            detail="ANBU_ARTIFACT_BUCKET is not set; nothing was uploaded and no link exists.",
+            detail="KINGUARD_ARTIFACT_BUCKET is not set; nothing was uploaded and no link exists.",
         )
 
     try:
@@ -147,7 +147,7 @@ def signed_url(object_name: str) -> StoredArtifact:
     if not bucket_name:
         return StoredArtifact(
             stored=False, url=None,
-            detail="ANBU_ARTIFACT_BUCKET is not set; there is no object to link to.",
+            detail="KINGUARD_ARTIFACT_BUCKET is not set; there is no object to link to.",
         )
 
     try:

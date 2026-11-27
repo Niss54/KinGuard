@@ -69,7 +69,7 @@ def sent(monkeypatch):
 
 
 def _document(monkeypatch, kind, body):
-    monkeypatch.setenv("ANBU_DOC_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DOC_VISION_MODE", "gemini")
     monkeypatch.setattr(dv, "_call_model", lambda image, mime_type: json.dumps(
         {"kind": kind, "confidence": 0.95, "unreadable": False,
          "patient_name": "Ashanthi M.", kind: body}))
@@ -78,10 +78,10 @@ def _document(monkeypatch, kind, body):
 def _bill(monkeypatch):
     from kinguard.bills import extract as bill_vision
 
-    monkeypatch.setenv("ANBU_DOC_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DOC_VISION_MODE", "gemini")
     monkeypatch.setattr(dv, "_call_model", lambda image, mime_type: json.dumps(
         {"kind": "bill", "confidence": 0.95, "unreadable": False, "bill": {}}))
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(bill_vision, "_call_model", lambda image, mime_type: json.dumps({
         "vendor": "Sacred Heart Hospital", "bill_date": "2026-08-19",
         "stated_total_inr": 9000, "unreadable": False, "unreadable_reason": None,
@@ -133,7 +133,7 @@ def test_the_same_lab_report_again_is_reported_as_already_on_file(
 
 def test_an_unreadable_document_is_not_called_a_bill(case, sent, monkeypatch):
     parent_id, case_id = case
-    monkeypatch.setenv("ANBU_DOC_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DOC_VISION_MODE", "gemini")
     monkeypatch.setattr(dv, "_call_model", lambda image, mime_type: json.dumps(
         {"kind": "lab_report", "unreadable": True, "unreadable_reason": "too dark"}))
     _run(case_id, parent_id)
@@ -190,7 +190,7 @@ def test_every_outcome_says_something(case, sent, monkeypatch):
     """A background task that dies quietly is indistinguishable from one that
     never ran, which is precisely what 'nothing happens' looked like."""
     parent_id, case_id = case
-    monkeypatch.setenv("ANBU_DOC_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DOC_VISION_MODE", "gemini")
 
     def explode(image, mime_type):
         raise RuntimeError("vertex is down")

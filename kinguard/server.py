@@ -71,14 +71,14 @@ logger = logging.getLogger(__name__)
 AGENTS_DIR = str(Path(__file__).resolve().parent.parent)
 
 # Memory Bank for cross-session context across weeks of a case. Set
-# ANBU_MEMORY_SERVICE_URI to an agentengine:// resource to enable it; without
+# KINGUARD_MEMORY_SERVICE_URI to an agentengine:// resource to enable it; without
 # it ADK falls back to in-memory, which is fine locally and wrong in production.
-MEMORY_SERVICE_URI = os.getenv("ANBU_MEMORY_SERVICE_URI") or None
-SESSION_SERVICE_URI = os.getenv("ANBU_SESSION_SERVICE_URI") or None
+MEMORY_SERVICE_URI = os.getenv("KINGUARD_MEMORY_SERVICE_URI") or None
+SESSION_SERVICE_URI = os.getenv("KINGUARD_SESSION_SERVICE_URI") or None
 
 app = get_fast_api_app(
     agents_dir=AGENTS_DIR,
-    web=os.getenv("ANBU_SERVE_DEV_UI", "true").lower() == "true",
+    web=os.getenv("KINGUARD_SERVE_DEV_UI", "true").lower() == "true",
     memory_service_uri=MEMORY_SERVICE_URI,
     session_service_uri=SESSION_SERVICE_URI,
     allow_origins=["*"],
@@ -143,7 +143,7 @@ async def _protect_adk_routes(request: Request, call_next):
         or any(path.startswith(prefix) for prefix in _PROTECTED_ADK_PREFIXES)
     ):
         try:
-            require_adk_session(request.headers.get("authorization"))
+            require_adk_session(request.headers.get("authorization"), path=path)
         except HTTPException as exc:
             return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
     return await call_next(request)
@@ -163,11 +163,11 @@ def _demo_family_timezone() -> str:
     source. An unusable value degrades to UTC and says so, because a zone that
     silently resolves to a different wrong one is the bug this replaces.
     """
-    name = (os.getenv("ANBU_DEMO_FAMILY_TZ") or "").strip() or "America/Los_Angeles"
+    name = (os.getenv("KINGUARD_DEMO_FAMILY_TZ") or "").strip() or "America/Los_Angeles"
     try:
         ZoneInfo(name)
     except (ZoneInfoNotFoundError, ValueError):
-        logger.warning("ANBU_DEMO_FAMILY_TZ=%r is not an IANA zone; using UTC", name)
+        logger.warning("KINGUARD_DEMO_FAMILY_TZ=%r is not an IANA zone; using UTC", name)
         return "UTC"
     return name
 
@@ -320,17 +320,17 @@ def firebase_config() -> dict[str, Any]:
     Firebase App Check (reCAPTCHA Enterprise or registered debug token) and
     HTTP referrer restrictions on the API key.
     """
-    api_key = (os.getenv("KINGUARD_FIREBASE_API_KEY") or os.getenv("ANBU_FIREBASE_API_KEY") or "").strip()
-    auth_domain = (os.getenv("KINGUARD_FIREBASE_AUTH_DOMAIN") or os.getenv("ANBU_FIREBASE_AUTH_DOMAIN") or "").strip()
-    project_id = (os.getenv("KINGUARD_FIREBASE_PROJECT_ID") or os.getenv("ANBU_FIREBASE_PROJECT_ID") or "").strip()
-    storage_bucket = (os.getenv("KINGUARD_FIREBASE_STORAGE_BUCKET") or os.getenv("ANBU_FIREBASE_STORAGE_BUCKET") or "").strip()
-    messaging_sender_id = (os.getenv("KINGUARD_FIREBASE_MESSAGING_SENDER_ID") or os.getenv("ANBU_FIREBASE_MESSAGING_SENDER_ID") or "").strip()
-    app_id = (os.getenv("KINGUARD_FIREBASE_APP_ID") or os.getenv("ANBU_FIREBASE_APP_ID") or "").strip()
-    recaptcha_site_key = (os.getenv("KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY") or os.getenv("ANBU_FIREBASE_RECAPTCHA_SITE_KEY") or "").strip()
-    app_check_debug = (os.getenv("KINGUARD_FIREBASE_APPCHECK_DEBUG") or os.getenv("ANBU_FIREBASE_APPCHECK_DEBUG") or "").strip().lower() in {
+    api_key = os.getenv("KINGUARD_FIREBASE_API_KEY", "").strip()
+    auth_domain = os.getenv("KINGUARD_FIREBASE_AUTH_DOMAIN", "").strip()
+    project_id = os.getenv("KINGUARD_FIREBASE_PROJECT_ID", "").strip()
+    storage_bucket = os.getenv("KINGUARD_FIREBASE_STORAGE_BUCKET", "").strip()
+    messaging_sender_id = os.getenv("KINGUARD_FIREBASE_MESSAGING_SENDER_ID", "").strip()
+    app_id = os.getenv("KINGUARD_FIREBASE_APP_ID", "").strip()
+    recaptcha_site_key = os.getenv("KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY", "").strip()
+    app_check_debug = os.getenv("KINGUARD_FIREBASE_APPCHECK_DEBUG", "").strip().lower() in {
         "1", "true", "yes", "on",
     }
-    model = (os.getenv("KINGUARD_FIREBASE_MODEL") or os.getenv("ANBU_FIREBASE_MODEL") or "gemini-2.5-flash").strip()
+    model = (os.getenv("KINGUARD_FIREBASE_MODEL") or "gemini-2.5-flash").strip()
     configured = bool(api_key and project_id and app_id)
     return {
         "configured": configured,
@@ -357,7 +357,7 @@ def map_config() -> dict[str, Any]:
     is the control. Absent, the map degrades to a list rather than breaking.
     """
     return {
-        "maps_api_key": os.getenv("ANBU_MAPS_API_KEY", ""),
+        "maps_api_key": os.getenv("KINGUARD_MAPS_API_KEY", ""),
         "label": ("Hospital identity and location verified against Google Places. "
                   "Insurer empanelment and capability remain seeded."),
     }
@@ -450,7 +450,7 @@ def _scratch_parent() -> dict[str, Any]:
 
 
 @app.post("/api/demo/seed")
-def demo_seed(scratch: bool = False) -> dict[str, Any]:
+def demo_seed(scratch: bool = False, episode: bool = False) -> dict[str, Any]:
     """Create the Thoothukudi demo family and return its parent_id.
 
     A freshly deployed service has no parent on record, which makes
@@ -479,7 +479,7 @@ def demo_seed(scratch: bool = False) -> dict[str, Any]:
     #
     # Matched on the family handset rather than the name, because the number is
     # what inbound WhatsApp resolves and therefore what has to stay single.
-    family_e164 = os.getenv("ANBU_DEMO_FAMILY_E164") or "+14155550142"
+    family_e164 = os.getenv("KINGUARD_DEMO_FAMILY_E164") or "+14155550142"
     existing = service.lookup_whatsapp_number(family_e164)
     parent_id = (existing or {}).get("parent_id") if existing else None
     if parent_id and service.load_profile(parent_id) is None:
@@ -533,23 +533,23 @@ def demo_seed(scratch: bool = False) -> dict[str, Any]:
         # a getenv default never fires for a set-but-empty variable. A seeded
         # contact with an empty name or number fails quietly and looks like data
         # loss.
-        name=os.getenv("ANBU_DEMO_FAMILY_NAME") or "Nishant Maurya",
+        name=os.getenv("KINGUARD_DEMO_FAMILY_NAME") or "Nishant Maurya",
         relationship="son",
         # Overridable so a recorded demo can point at a real opted-in handset.
         # Defaults to a Twilio test number, which accepts sends and delivers
         # nothing, so an unconfigured deploy cannot message a real person.
-        whatsapp_e164=os.getenv("ANBU_DEMO_FAMILY_E164") or "+14155550142",
+        whatsapp_e164=os.getenv("KINGUARD_DEMO_FAMILY_E164") or "+14155550142",
         # Same reasoning as the number: a recorded demo needs the seeded family
         # bound to the account that will actually sign in, or every fresh seed
         # has to be re-linked by hand before the sign-in beat works. Empty by
         # default, which means the seeded contact cannot sign in — sending
         # messages and reading the record are separate permissions here.
-        email=os.getenv("ANBU_DEMO_FAMILY_EMAIL") or "",
+        email=os.getenv("KINGUARD_DEMO_FAMILY_EMAIL") or "",
         timezone_name=_demo_family_timezone(),
         # Per-recipient, and English by default: the son reads English while
         # his mother reads Tamil, which is the whole point of the preference
         # living on the person rather than on the deployment.
-        language=os.getenv("ANBU_DEMO_FAMILY_LANGUAGE") or "en",
+        language=os.getenv("KINGUARD_DEMO_FAMILY_LANGUAGE") or "en",
         is_primary=True,
         consent_purposes=[
             "admission_alerts", "status_updates", "billing_updates", "claim_updates",
@@ -569,14 +569,14 @@ def demo_seed(scratch: bool = False) -> dict[str, Any]:
     # who agreed to help is not a family member who agreed to everything.
     onboarding_tools.record_family_contact(
         parent_id,
-        name=os.getenv("ANBU_DEMO_CIRCLE_NAME") or "Meena",
+        name=os.getenv("KINGUARD_DEMO_CIRCLE_NAME") or "Meena",
         relationship="neighbour",
         # Defaults to a number that cannot receive anything, so an
         # unconfigured deploy never messages a stranger. Point it at a real
         # opted-in handset to see the care-circle beat actually arrive.
-        whatsapp_e164=os.getenv("ANBU_DEMO_CIRCLE_E164") or "+919000000101",
+        whatsapp_e164=os.getenv("KINGUARD_DEMO_CIRCLE_E164") or "+919000000101",
         timezone_name="Asia/Kolkata",
-        language=os.getenv("ANBU_DEMO_CIRCLE_LANGUAGE") or "ta",
+        language=os.getenv("KINGUARD_DEMO_CIRCLE_LANGUAGE") or "ta",
         is_primary=False,
         role="care_circle",
         # OUTBOUND_NOTIFY lets her be told; INBOUND_WELLBEING lets her answer.
@@ -597,8 +597,8 @@ def demo_seed(scratch: bool = False) -> dict[str, Any]:
     # for one direction only and the demo never needed to set it.
     onboarding_tools.record_parent_channel(
         parent_id,
-        whatsapp_e164=os.getenv("ANBU_DEMO_PARENT_E164") or "+14155550143",
-        language=os.getenv("ANBU_DEMO_PARENT_LANGUAGE") or "ta",
+        whatsapp_e164=os.getenv("KINGUARD_DEMO_PARENT_E164") or "+14155550143",
+        language=os.getenv("KINGUARD_DEMO_PARENT_LANGUAGE") or "ta",
     )
     # And her agreement to be sent them. Separate from the number, and separate
     # from every consent the son holds: none of his agreements can authorise a
@@ -611,11 +611,37 @@ def demo_seed(scratch: bool = False) -> dict[str, Any]:
     # which is correct but makes a seeded demo look broken.
     onboarding_tools.record_emergency_disclosure_consent(parent_id)
 
-    return {
+    out: dict[str, Any] = {
         "status": "seeded",
         "parent_id": parent_id,
         "next": f"POST /api/intake with parent_id={parent_id}",
     }
+    if episode:
+        signal = intake_tools.receive_intake_signal(
+            parent_id=parent_id,
+            channel="er_desk_webhook",
+            raw_text=(
+                "71F brought in by a neighbour. Chest tightness ~20 min, "
+                "radiating to left arm, sweating. She says it's probably just gas."
+            ),
+            reported_by="Sacred Heart ER desk",
+        )
+        triage = triage_tools.run_triage(
+            parent_id=parent_id,
+            symptoms=["chest pain", "sweating"],
+            free_text=(
+                "71F brought in by a neighbour. Chest tightness ~20 min, "
+                "radiating to left arm, sweating. She says it's probably just gas."
+            ),
+            reported_by="Sacred Heart ER desk",
+            lat=0.0,
+            lon=0.0,
+            case_id=signal["case_id"],
+        )
+        out["case_id"] = signal["case_id"]
+        out["signal"] = signal
+        out["triage"] = triage
+    return out
 
 
 @app.get("/api/parents/{parent_id}")
@@ -628,13 +654,22 @@ def parent_detail(parent_id: str, _session: str = Depends(require_case_access)) 
 
 
 @app.post("/api/intake-signal")
-def intake_signal(request: IntakeSignalRequest) -> dict[str, Any]:
+def intake_signal(
+    request: IntakeSignalRequest,
+    raw_request: Request,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
     """An intake signal arriving from outside — the only way an episode starts.
 
     KinGuard does not monitor and cannot notice anything on its own. This is
     the inbound channel something else posts to. Every signal is labelled
     SIMULATED in this build, because no real ER system posts here.
     """
+    verify_family_session(
+        raw_request,
+        authorization,
+        parent_id_override=request.parent_id,
+    )
     signal = intake_tools.receive_intake_signal(
         parent_id=request.parent_id,
         channel=request.channel,
@@ -710,7 +745,7 @@ async def wellbeing_inbound(request: Request, background: BackgroundTasks) -> Re
     #
     # It was gated on the sender being unregistered, which was wrong in the one
     # case that matters most: a family member's own phone. Tapping "connect" on
-    # the son's handset filed "ANBU-case-..." as a wellbeing check-in — a
+    # the son's handset filed "KINGUARD-case-..." as a wellbeing check-in — a
     # symptom report, on his mother's record — and bound nothing.
     #
     # A registered contact is not disqualified from also being handed the link.
@@ -1208,7 +1243,15 @@ async def case_document_ingest(
     if case is None:
         raise HTTPException(status_code=404, detail=f"no case {case_id}")
 
-    data = await file.read()
+    MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
+    data = await file.read(MAX_DOCUMENT_BYTES + 1)
+    if len(data) > MAX_DOCUMENT_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Uploaded document exceeds the 10 MB size limit.",
+        )
+    if not data:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
     mime = (file.content_type or "").split(";")[0].strip().lower()
     if mime not in docvision_read.SUPPORTED_MIME:
         ext = Path(file.filename or "").suffix.lower()
@@ -2046,10 +2089,10 @@ def preflight(_session: str = Depends(require_family_session)) -> dict[str, Any]
               f"verified={result.get('verified')} receipts={count}, "
               f"expected verified={want_verified} receipts={want_count}")
 
-    handset = os.getenv("ANBU_DEMO_CIRCLE_E164", "")
+    handset = os.getenv("KINGUARD_DEMO_CIRCLE_E164", "")
     if not handset:
         check("demo handset", False,
-              "ANBU_DEMO_CIRCLE_E164 is not set, so nothing else can be checked")
+              "KINGUARD_DEMO_CIRCLE_E164 is not set, so nothing else can be checked")
         return {"ok": False, "checks": checks}
 
     sender = inbound.resolve_sender(handset)
@@ -2145,7 +2188,7 @@ def preflight(_session: str = Depends(require_family_session)) -> dict[str, Any]
     check("judge sandbox", True,
           "ON, so an unknown number that texts START is given a synthetic "
           "family. Her handset is registered and is never treated as a "
-          "stranger. Switch it off after judging: ANBU_SANDBOX=off"
+          "stranger. Switch it off after judging: KINGUARD_SANDBOX=off"
           if sandbox_on else "off, so an unknown number is only told what this is",
           fatal=False)
 
@@ -2183,7 +2226,7 @@ def _booker_state() -> tuple[bool | None, str]:
     """
     import os
 
-    base = os.getenv("ANBU_BOOKER_URL", "").rstrip("/")
+    base = os.getenv("KINGUARD_BOOKER_URL", "").rstrip("/")
     if not base:
         return True, "no booker is wired, so nothing can be submitted anywhere"
     from kinguard.booking.web import WebChannel
@@ -2207,7 +2250,10 @@ def case_verify(case_id: str) -> dict[str, Any]:
     is that a family or an insurer can check it without trusting us to run the
     check for them.
     """
-    return provenance_tools.verify_case_chain(case_id)
+    result = provenance_tools.verify_case_chain(case_id)
+    if service.load_case(case_id) is None and result["receipt_count"] == 0:
+        raise HTTPException(status_code=404, detail=f"no case {case_id}")
+    return result
 
 
 @app.post("/api/cases/{case_id}/handoff-link")
@@ -2289,7 +2335,7 @@ def send_handoff_link(
     except access.HandoffDenied as denied:
         raise HTTPException(status_code=409, detail=str(denied)) from None
 
-    base = os.getenv("ANBU_PUBLIC_BASE_URL", "").rstrip("/")
+    base = os.getenv("KINGUARD_PUBLIC_BASE_URL", "").rstrip("/")
     url = f"{base}/handoff/{token}" if base else f"/handoff/{token}"
     params = {
         "parent_name": profile.name.split()[0] or profile.name,
@@ -2984,7 +3030,7 @@ def _order_form_html(token: str) -> str:
         f"<p class=foot>You are ordering this. KinGuard does not order tests, "
         f"and does not decide whether she can travel — it only looks up where "
         f"the test could be done and tells the family.</p>"
-        f"<label class=fl for=dxnote>Bedside quick note (optional — extract order locally)</label>"
+        f"<label class=fl for=dxnote>Bedside quick note (optional — extract order via Hybrid AI)</label>"
         f"<textarea id=dxnote class=fi rows=2 style='min-height:64px' "
         f"placeholder='e.g. Chest pain settled. Repeat troponin now; patient cannot travel.'></textarea>"
         f"<div style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px'>"
@@ -3069,7 +3115,7 @@ def _order_form_html(token: str) -> str:
         f"srcTag.textContent=src;"
         f"if(parsed.orders_test)document.getElementById('dxtest').value=String(parsed.orders_test);"
         f"if(['ambulatory','non_ambulatory','unknown'].includes(parsed.mobility))document.getElementById('dxmob').value=parsed.mobility;"
-        f"exOut.textContent='Proposed locally via '+src+'. Review the Test field below before tapping Record the order. Nothing is saved yet.';"
+        f"exOut.textContent='Proposed via '+src+'. Review the Test field below before tapping Record the order. Nothing is saved yet.';"
         f"}}catch(e){{exOut.textContent='Could not extract automatically ('+String(e)+'). Type the test below.';}}"
         f"finally{{exBtn.disabled=false;exBtn.textContent='Extract order (Hybrid AI)';}}"
         f"}});"
@@ -3249,7 +3295,7 @@ def _qr_svg(path: str) -> str:
 
     import segno
 
-    base = os.getenv("ANBU_PUBLIC_BASE_URL", "").rstrip("/")
+    base = os.getenv("KINGUARD_PUBLIC_BASE_URL", "").rstrip("/")
     target = f"{base}{path}" if base else path
 
     buffer = io.BytesIO()
@@ -4116,16 +4162,20 @@ def _reply_audience(sender: Any) -> tuple[str, str]:
 # only sentence in the system addressed to somebody who is not on any record,
 # and it has to be true of a product whose whole claim is that who you are
 # decides what you get.
+_PUBLIC_BASE = (
+    os.getenv("KINGUARD_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    or "http://127.0.0.1:8080"
+)
 _UNKNOWN_SENDER_REPLY = (
     "This is KinGuard, a coordination agent for a family whose parent lives in "
     "India. Your number is not on anyone's record here, so your message was not "
     "stored and nothing was read from it. That is deliberate: every message this "
     "system keeps belongs to somebody who agreed, for a named purpose.\n\n"
     "You can still see it work, without a credential:\n"
-    "https://kinguard-37j4eofpwq-el.a.run.app/app\n\n"
+    f"{_PUBLIC_BASE}/app\n\n"
     "And you can check that its record has not been altered, from a terminal, "
     "with no login:\n"
-    "https://kinguard-37j4eofpwq-el.a.run.app/api/cases/case-da1c2cb6db/verify\n\n"
+    f"{_PUBLIC_BASE}/api/cases/case-da1c2cb6db/verify\n\n"
     "If you would rather drive it yourself, reply START and you will be given "
     "a synthetic family of your own to try it on.\n\n"
     "Please do not send personal or health information to this number."

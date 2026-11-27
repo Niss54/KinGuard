@@ -53,19 +53,19 @@ KEYWORD = "START"
 
 
 def enabled() -> bool:
-    return os.getenv("ANBU_SANDBOX", "off").strip().lower() in {"on", "true", "1"}
+    return os.getenv("KINGUARD_SANDBOX", "off").strip().lower() in {"on", "true", "1"}
 
 
 def daily_cap() -> int:
     try:
-        return int(os.getenv("ANBU_SANDBOX_DAILY_CAP", "25"))
+        return int(os.getenv("KINGUARD_SANDBOX_DAILY_CAP", "25"))
     except ValueError:
         return 25
 
 
 def ttl_hours() -> int:
     try:
-        return int(os.getenv("ANBU_SANDBOX_TTL_HOURS", "24"))
+        return int(os.getenv("KINGUARD_SANDBOX_TTL_HOURS", "24"))
     except ValueError:
         return 24
 
@@ -242,24 +242,29 @@ def release_expired(*, now: datetime | None = None) -> list[str]:
 
 # --- what a visitor is told -------------------------------------------------
 
+_PUBLIC_BASE = (
+    os.getenv("KINGUARD_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    or "http://127.0.0.1:8080"
+)
+
 _CLOSED = (
     "Thanks for trying. The sandbox is switched off at the moment, so there is "
     "nothing here for a number that is not on a record. You can still see it "
     "work, with no credential: "
-    "https://kinguard-37j4eofpwq-el.a.run.app/app"
+    f"{_PUBLIC_BASE}/app"
 )
 
 _CAPPED = (
     "The sandbox has handed out as many families as it will today. That cap is "
     "deliberate: this is a public number in a public document. Try again "
     "tomorrow, or see it work now with no credential: "
-    "https://kinguard-37j4eofpwq-el.a.run.app/app"
+    f"{_PUBLIC_BASE}/app"
 )
 
 _FAILED = (
     "Something went wrong setting that up, and nothing was half-made. Try "
     "START again, or see it work with no credential: "
-    "https://kinguard-37j4eofpwq-el.a.run.app/app"
+    f"{_PUBLIC_BASE}/app"
 )
 
 
@@ -283,7 +288,7 @@ def _welcome(parent_id: str, *, again: bool = False) -> str:
         "3. Photograph a discharge summary. It starts a fortnight of check-ins "
         "and files the claim by itself.\n"
         "4. Reply STOP to end the check-ins.\n\n"
-        f"Your record: https://kinguard-37j4eofpwq-el.a.run.app/app?case=\n"
+        f"Your record: {_PUBLIC_BASE}/app?case=\n"
         "It is yours for a day, then the check-ins stop and this number is "
         "released."
     )

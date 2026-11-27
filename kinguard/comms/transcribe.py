@@ -184,7 +184,7 @@ def transcribe(audio: bytes, mime_type: str = "audio/ogg",
     to listen to the recording, which is a different and more honest response
     than inventing a symptom or storing the note in silence.
     """
-    if os.getenv("ANBU_TRANSCRIBE_MODE", "gemini").strip().lower() in {"off", "none", "false"}:
+    if os.getenv("KINGUARD_TRANSCRIBE_MODE", "gemini").strip().lower() in {"off", "none", "false"}:
         return Transcript(ok=False, engine="off",
                           detail="transcription is switched off; nothing was transcribed")
 
@@ -218,7 +218,7 @@ def transcribe_dictation(audio: bytes, mime_type: str = "audio/ogg",
     the fact, but never asked for. The no-interpret wall is easier to trust
     when the interpretation was never requested.
     """
-    if os.getenv("ANBU_TRANSCRIBE_MODE", "gemini").strip().lower() in {"off", "none", "false"}:
+    if os.getenv("KINGUARD_TRANSCRIBE_MODE", "gemini").strip().lower() in {"off", "none", "false"}:
         return Transcript(ok=False, engine="off",
                           detail="transcription is switched off; nothing was transcribed")
 

@@ -42,7 +42,7 @@ import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-DEFAULT_URL = "https://kinguard-37j4eofpwq-el.a.run.app"
+DEFAULT_URL = "http://127.0.0.1:8080"
 TIMEOUT = 20
 
 GREEN, RED, AMBER, DIM, OFF = "\033[32m", "\033[31m", "\033[33m", "\033[2m", "\033[0m"
@@ -70,9 +70,9 @@ def _status(url: str) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url", default=os.getenv("ANBU_URL", DEFAULT_URL))
-    parser.add_argument("--token", default=os.getenv("ANBU_DEMO_TOKEN",
-                                                     "anbu-demo-family-token"))
+    parser.add_argument("--url", default=os.getenv("KINGUARD_URL", DEFAULT_URL))
+    parser.add_argument("--token", default=os.getenv("KINGUARD_DEMO_TOKEN",
+                                                     "kinguard-demo-family-token"))
     parser.add_argument("--fix", action="store_true",
                         help="unbind a bound handset and close a stale code request")
     args = parser.parse_args()
@@ -91,7 +91,7 @@ def main() -> int:
         }
         code, body = state.result()
         wanted = {"content is refused without a credential": 401,
-                  "verify is open to everyone": 200,
+                  "verify is open to everyone": 404,
                   "an expired short link says so": 410}
         probed = {name: future.result() for name, future in probes.items()}
 
@@ -155,9 +155,9 @@ def _fix(base: str, token: str) -> None:
     from kinguard.handoff import channel
     from kinguard.recovery import window as recovery
 
-    handset = os.getenv("ANBU_DEMO_CIRCLE_E164", "")
+    handset = os.getenv("KINGUARD_DEMO_CIRCLE_E164", "")
     if not handset:
-        print(f"  {DIM}ANBU_DEMO_CIRCLE_E164 is not set; nothing to clear{OFF}")
+        print(f"  {DIM}KINGUARD_DEMO_CIRCLE_E164 is not set; nothing to clear{OFF}")
         return
 
     key = service.number_key(handset)

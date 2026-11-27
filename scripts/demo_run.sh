@@ -11,13 +11,13 @@
 # All data is synthetic. Nothing here is real patient information.
 set -euo pipefail
 
-URL="${ANBU_URL:-https://kinguard-37j4eofpwq-el.a.run.app}"
+URL="${KINGUARD_URL:-http://127.0.0.1:8080}"
 JQ() { python3 -c "import sys,json;d=json.load(sys.stdin);print($1)"; }
 # gRPC's fork handler chatters on stderr when Pub/Sub publishes from a short-lived
 # process. Harmless, and unreadable on camera.
 export GRPC_VERBOSITY=NONE GLOG_minloglevel=3
 # The trail returns case content and is credentialed. Verification is not.
-TOKEN="${KINGUARD_DEMO_TOKEN:-${ANBU_DEMO_TOKEN:-kinguard-demo-family-token}}"
+TOKEN="${KINGUARD_DEMO_TOKEN:-kinguard-demo-family-token}"
 AUTH=(-H "Authorization: Bearer $TOKEN")
 quiet() { "$@" 2> >(grep -v "ev_poll_posix\|FD from fork parent" >&2); }
 BAR="────────────────────────────────────────────────────────────────────────────"
@@ -71,7 +71,7 @@ beat "BEAT 3 — A signal ARRIVES (nothing was detected), and severity holds HIG
 echo "  KinGuard does not watch anyone. The episode starts because the hospital's"
 echo "  intake desk posted to us — the system reacts, it does not sense."
 cmd "curl -sX POST $URL/api/intake-signal -d '{\"channel\":\"er_desk_webhook\", ...}'"
-SIGNAL=$(curl -s -X POST "$URL/api/intake-signal" -H 'content-type: application/json' \
+SIGNAL=$(curl -s -X POST "${AUTH[@]}" "$URL/api/intake-signal" -H 'content-type: application/json' \
   -d "{\"parent_id\":\"$PARENT\",\"channel\":\"er_desk_webhook\",\"reported_by\":\"Sacred Heart ER desk\",\"symptoms\":[\"chest pain\",\"sweating\"],\"raw_text\":\"71F brought in by a neighbour. Chest tightness ~20 min, radiating to left arm, sweating. She says it's probably just gas.\"}")
 echo "$SIGNAL" | python3 -c "
 import sys,json;d=json.load(sys.stdin)['signal']

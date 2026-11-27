@@ -958,7 +958,7 @@ def test_a_neighbour_sharing_the_family_handset_is_still_told(monkeypatch):
     from kinguard.wellbeing import handler
     from kinguard.wellbeing import store as wb
 
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-collision-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-collision-secret")
 
     sent: list[tuple[str, str]] = []
     monkeypatch.setattr(

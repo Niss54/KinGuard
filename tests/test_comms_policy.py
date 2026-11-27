@@ -157,8 +157,8 @@ def test_every_template_renders_and_passes_its_own_gate():
         "address": "KTC Nagar, Thoothukudi, Tamil Nadu 628002, India",
         "status_line": "Ashanthi's test is requested. The centre has not "
                        "confirmed a time yet, and will be in touch.",
-        "map_line": "On the map: https://anbu.example/s/abc123\n",
-        "evidence_line": "What the centre's page said: https://anbu.example/s/xyz\n",
+        "map_line": "On the map: https://kinguard.example/s/abc123\n",
+        "evidence_line": "What the centre's page said: https://kinguard.example/s/xyz\n",
         "minutes": "4",
         "distance": "1.8",
         "cancel": "+91 88707 20883",
@@ -321,8 +321,8 @@ def test_a_rendered_template_still_passes_the_gate():
         "address": "KTC Nagar, Thoothukudi, Tamil Nadu 628002, India",
         "status_line": "Ashanthi's test is requested. The centre has not "
                        "confirmed a time yet, and will be in touch.",
-        "map_line": "On the map: https://anbu.example/s/abc123\n",
-        "evidence_line": "What the centre's page said: https://anbu.example/s/xyz\n",
+        "map_line": "On the map: https://kinguard.example/s/abc123\n",
+        "evidence_line": "What the centre's page said: https://kinguard.example/s/xyz\n",
         "minutes": "4",
         "distance": "1.8",
         "cancel": "+91 88707 20883",

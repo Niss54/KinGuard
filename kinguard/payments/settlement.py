@@ -1,6 +1,6 @@
 """Settlement. A real provider in test mode, or a stub, and it says which.
 
-`ANBU_PAYMENT_MODE` picks:
+`KINGUARD_PAYMENT_MODE` picks:
 
   razorpay   a real API call to Razorpay in TEST MODE. Real order, real
              identifier, real webhook. Test-mode money, which does not exist.
@@ -87,7 +87,7 @@ def rail() -> str:
 
 
 def _mode() -> str:
-    return os.getenv("ANBU_PAYMENT_MODE", "simulated").strip().lower()
+    return os.getenv("KINGUARD_PAYMENT_MODE", "simulated").strip().lower()
 
 
 # Kept as a module attribute because callers import it directly.

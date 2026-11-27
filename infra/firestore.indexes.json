@@ -1,8 +1,8 @@
 {
-  "_comment": "Deploy with: gcloud firestore indexes composite create --collection-group=anbu --field-config=field-path=pk,order=ascending --field-config=field-path=sk,order=ascending",
+  "_comment": "Deploy with: gcloud firestore indexes composite create --collection-group=kinguard --field-config=field-path=pk,order=ascending --field-config=field-path=sk,order=ascending",
   "indexes": [
     {
-      "collectionGroup": "anbu",
+      "collectionGroup": "kinguard",
       "queryScope": "COLLECTION",
       "_why": "Single-table PK/SK layout: every read is an equality on pk plus a range scan on sk, ordered. Firestore needs a composite index for that combination. Without it, loading a case's receipt chain fails at query time rather than returning empty.",
       "fields": [

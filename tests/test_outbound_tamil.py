@@ -167,7 +167,7 @@ def test_an_empty_model_reply_is_a_failure_not_an_empty_message(monkeypatch):
 
 
 def test_switching_translation_off_falls_back_to_the_record(monkeypatch):
-    monkeypatch.setenv("ANBU_TRANSLATE_MODE", "off")
+    monkeypatch.setenv("KINGUARD_TRANSLATE_MODE", "off")
     rendered = translate.render("KinGuard: recorded.", language="ta", source_ref="bill")
     assert rendered.translated is False
     assert rendered.text == "KinGuard: recorded."

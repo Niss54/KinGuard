@@ -2,37 +2,37 @@ import os
 
 # Set before anything imports config: the suite must never touch GCP, and a
 # developer's .env pointing at a real project must not change that.
-os.environ["ANBU_STORE_BACKEND"] = "memory"
-os.environ["ANBU_PUBSUB_ENABLED"] = "false"
+os.environ["KINGUARD_STORE_BACKEND"] = "memory"
+os.environ["KINGUARD_PUBSUB_ENABLED"] = "false"
 # The demo caption is a recording affordance and OFF is its real default. A
 # developer's .env switching it on must not make the suite agree that captions
 # are normal, for the same reason the store backend is pinned above.
-os.environ["ANBU_DEMO_ROLE_TAGS"] = "off"
+os.environ["KINGUARD_DEMO_ROLE_TAGS"] = "off"
 # Same reason, and a sharper one. A recording sets this to 0 so a check-in goes
 # out whatever the hour where she is. That is a setting for one afternoon, not
 # the policy, and the suite must keep testing that nothing reaches a seventy-one
 # year old before nine in the morning.
-os.environ["ANBU_RECOVERY_HOUR"] = "9"
+os.environ["KINGUARD_RECOVERY_HOUR"] = "9"
 # The suite must not reach Google Cloud, and a developer's .env is loaded before
 # this runs. So the bank is emptied here rather than inherited: every hermetic
 # memory test stays on the unconfigured path and the one live cross-session
 # test skips, whatever happens to be in .env. Asking for the live test is a
 # separate, deliberate act:
 #
-#   ANBU_MEMORY_BANK_LIVE=projects/.../reasoningEngines/... pytest -m memory_bank
+#   KINGUARD_MEMORY_BANK_LIVE=projects/.../reasoningEngines/... pytest -m memory_bank
 #
 # A second name rather than the real one, so a Memory Bank can never end up in
 # a test run because somebody's shell already had it exported.
 # Set empty rather than deleted: python-dotenv loads the developer's .env when
 # kinguard is first imported, and it will fill a name that is absent but
 # will not override one that is already present.
-os.environ["ANBU_MEMORY_BANK"] = os.environ.get("ANBU_MEMORY_BANK_LIVE", "")
+os.environ["KINGUARD_MEMORY_BANK"] = os.environ.get("KINGUARD_MEMORY_BANK_LIVE", "")
 # Language detection is a real model call on a real project. The suite never
 # makes one, and a test that wants the detector exercises `detect` directly
 # with `_ask` patched, so the parsing and the refusals are covered without
 # spending anything.
-os.environ["ANBU_DETECT_LANGUAGE_MODE"] = "off"
-os.environ.setdefault("ANBU_SIGNING_KEY_B64", "")
+os.environ["KINGUARD_DETECT_LANGUAGE_MODE"] = "off"
+os.environ.setdefault("KINGUARD_SIGNING_KEY_B64", "")
 
 import pytest
 
@@ -46,7 +46,7 @@ settings.cache_clear()
 def no_payment_provider_calls(monkeypatch):
     """The suite never talks to a payment provider.
 
-    ANBU_PAYMENT_MODE lives in .env, so the moment Razorpay was wired the whole
+    KINGUARD_PAYMENT_MODE lives in .env, so the moment Razorpay was wired the whole
     suite started making real API calls: 3 seconds became 28, and a machine
     without keys or without a network would have failed for reasons unrelated
     to the code under test.
@@ -54,7 +54,7 @@ def no_payment_provider_calls(monkeypatch):
     A test that wants the provider path asks for it explicitly by setting the
     mode itself, which is a visible decision rather than an inherited one.
     """
-    monkeypatch.setenv("ANBU_PAYMENT_MODE", "simulated")
+    monkeypatch.setenv("KINGUARD_PAYMENT_MODE", "simulated")
 
 
 @pytest.fixture(autouse=True)
@@ -68,8 +68,8 @@ def no_model_calls_from_dictation(monkeypatch):
     A test that wants the extraction stubs `_call_model`, which is the one seam
     it goes through.
     """
-    monkeypatch.setenv("ANBU_DICTATION_MODE", "off")
-    monkeypatch.setenv("ANBU_DIAGNOSTICS_MODE", "seeded")
+    monkeypatch.setenv("KINGUARD_DICTATION_MODE", "off")
+    monkeypatch.setenv("KINGUARD_DIAGNOSTICS_MODE", "seeded")
 
 
 @pytest.fixture(autouse=True)
@@ -80,7 +80,7 @@ def fresh_store():
 
 
 TRANSPORT_ENV = (
-    "ANBU_WHATSAPP_MODE",
+    "KINGUARD_WHATSAPP_MODE",
     "TWILIO_ACCOUNT_SID",
     "TWILIO_AUTH_TOKEN",
     "TWILIO_API_KEY_SID",
@@ -149,7 +149,7 @@ def no_translation_calls(monkeypatch, request):
     """
     if request.node.get_closest_marker("real_translation"):
         return
-    monkeypatch.setenv("ANBU_TRANSLATE_MODE", "off")
+    monkeypatch.setenv("KINGUARD_TRANSLATE_MODE", "off")
 
 
 def followed(text: str) -> str:

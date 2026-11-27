@@ -41,7 +41,10 @@ CLINICAL_PATTERNS: list[tuple[str, str]] = [
 # Where a family member goes for anything the gate will not send. Every
 # template points here, because "we did not tell you the lab value" is only
 # reasonable if the same message says where the lab value actually is.
-DASHBOARD_URL = os.getenv("ANBU_DASHBOARD_URL", "https://kinguard-37j4eofpwq-el.a.run.app/app")
+_PUBLIC_BASE = os.getenv("KINGUARD_PUBLIC_BASE_URL", "").strip().rstrip("/")
+DASHBOARD_URL = os.getenv("KINGUARD_DASHBOARD_URL") or (
+    f"{_PUBLIC_BASE}/app" if _PUBLIC_BASE else "http://127.0.0.1:8080/app"
+)
 
 # The pre-approved template set. Production template approval takes ~10-15
 # business days and will not clear inside the hackathon window, so these are

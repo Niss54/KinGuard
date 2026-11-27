@@ -31,7 +31,7 @@ bash .claude/skills/booking-mode/scripts/booking-mode.sh live
 ## Three things that are easy to get wrong
 
 **An absent variable means DRY.** The driver treats an unset
-`ANBU_BOOKING_DRYRUN` as on. So "no line in the env" is the commonest reading
+`KINGUARD_BOOKING_DRYRUN` as on. So "no line in the env" is the commonest reading
 and it means *safe*, not *unknown* — do not report it as "unset, state unclear".
 
 **A full deploy of the booker resets it to dry.** `infra/deploy_booker.sh` uses

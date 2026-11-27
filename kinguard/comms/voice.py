@@ -80,7 +80,7 @@ def place_call(to_e164: str, spoken: str, mode: str | None = None) -> CallResult
     at an hour they did not choose, so an unconfigured deployment must not be
     able to make one by accident.
     """
-    chosen = (mode if mode is not None else os.getenv("ANBU_VOICE_MODE", "off")).strip().lower()
+    chosen = (mode if mode is not None else os.getenv("KINGUARD_VOICE_MODE", "off")).strip().lower()
     if chosen in {"", "off", "none", "false"}:
         return CallResult(
             placed=False, to_e164=to_e164,

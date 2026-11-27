@@ -42,7 +42,7 @@ log = logging.getLogger(__name__)
 
 # The model, named here rather than in config, because this is the one call in
 # the system that deliberately does NOT use `settings().model`.
-MODEL = os.getenv("ANBU_DETECT_MODEL", "gemini-2.5-flash-lite")
+MODEL = os.getenv("KINGUARD_DETECT_MODEL", "gemini-2.5-flash-lite")
 
 # The closed list. Every language a family here plausibly writes in, and
 # nothing else. Widening it is an edit, not a thing the model can do.
@@ -71,7 +71,7 @@ _PROMPT = (
 
 
 def enabled() -> bool:
-    return os.getenv("ANBU_DETECT_LANGUAGE_MODE", "gemini").strip().lower() not in {
+    return os.getenv("KINGUARD_DETECT_LANGUAGE_MODE", "gemini").strip().lower() not in {
         "off", "none", "false", ""
     }
 

@@ -16,8 +16,8 @@ import sys
 # The spine runs standalone: no Firestore, no Pub/Sub, no model. Set before
 # anything imports config, and set outright rather than defaulted, so a .env
 # pointing at a real project cannot turn this into a live run.
-os.environ["ANBU_STORE_BACKEND"] = "memory"
-os.environ["ANBU_PUBSUB_ENABLED"] = "false"
+os.environ["KINGUARD_STORE_BACKEND"] = "memory"
+os.environ["KINGUARD_PUBSUB_ENABLED"] = "false"
 # And no transport. This was missed until the recovery step was added and the
 # script cheerfully posted a WhatsApp message to a made-up Indian number off a
 # developer's populated .env — the same class of bug the test suite already
@@ -25,12 +25,12 @@ os.environ["ANBU_PUBSUB_ENABLED"] = "false"
 # guard. The spine demonstrates that the GATE decides correctly; whether a
 # message then leaves the platform is not what it is showing, and it must not
 # depend on whose laptop it runs on.
-os.environ["ANBU_WHATSAPP_MODE"] = "off"
+os.environ["KINGUARD_WHATSAPP_MODE"] = "off"
 # No model, so no translation either. The recovery step below therefore shows
 # the honest fallback rather than Tamil: the recorded English, plus a line
 # saying plainly that it could not be rendered. That is the branch that has to
 # hold when Vertex is slow, and it is the one worth proving deterministically.
-os.environ["ANBU_TRANSLATE_MODE"] = "off"
+os.environ["KINGUARD_TRANSLATE_MODE"] = "off"
 
 from kinguard import service
 from kinguard.tools import (
@@ -48,7 +48,7 @@ BAR = "─" * 78
 # The handset this run notifies. One constant, because the contact and the send
 # have to agree: they diverged once, and a send to a number with no contact
 # behind it is refused for lack of consent rather than failing loudly.
-FAMILY_E164 = os.getenv("ANBU_DEMO_FAMILY_E164") or "+14155550142"
+FAMILY_E164 = os.getenv("KINGUARD_DEMO_FAMILY_E164") or "+14155550142"
 
 
 def step(n: int, title: str) -> None:
@@ -88,7 +88,7 @@ def main() -> int:
         parent_id,
         # Same override the seeded demo uses. `or` rather than a getenv default,
         # because a set-but-empty variable would otherwise name nobody.
-        name=os.getenv("ANBU_DEMO_FAMILY_NAME") or "Nishant Maurya",
+        name=os.getenv("KINGUARD_DEMO_FAMILY_NAME") or "Nishant Maurya",
         relationship="son",
         whatsapp_e164=FAMILY_E164,
         timezone_name="America/Los_Angeles",

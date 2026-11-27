@@ -22,7 +22,7 @@ is why the same bill photo replays cleanly on every run and the same discharge
 summary does not. A fresh case resets the bill check and never resets this one.
 
 So a run-through needs a different photograph of the same paper each time
-(`~/Desktop/anbu-demo/discharge_summary.png` plus `_take2` to `_take5`), and five
+(`~/Desktop/kinguard-demo/discharge_summary.png` plus `_take2` to `_take5`), and five
 takes leave five discharge summaries on the record for one admission. The Record
 tab lists every one of them (`webui/index.html:1101`).
 

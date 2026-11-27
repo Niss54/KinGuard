@@ -7,13 +7,13 @@ install:  ## Install dependencies including dev extras
 	uv sync --extra dev
 
 test:  ## Run the test suite (no GCP or model access needed)
-	ANBU_STORE_BACKEND=memory uv run pytest -q
+	KINGUARD_STORE_BACKEND=memory uv run pytest -q
 
 lint:  ## Lint
 	uv run ruff check kinguard tests scripts
 
 demo:  ## Run the end-to-end spine with no model in the loop
-	ANBU_STORE_BACKEND=memory uv run python scripts/demo_spine.py
+	KINGUARD_STORE_BACKEND=memory uv run python scripts/demo_spine.py
 
 serve:  ## Serve the agent API and ADK dev UI on :8080
 	uv run uvicorn kinguard.server:app --host 0.0.0.0 --port 8080 --reload
@@ -31,14 +31,14 @@ deploy:  ## Deploy to Cloud Run
 	./infra/deploy_cloud_run.sh
 
 preflight:  ## Check the state that silently ruins a recording (add FIX=1 to clear what is safe)
-	@ANBU_URL=$${ANBU_URL:-https://kinguard-37j4eofpwq-el.a.run.app} \
-	 ./.venv/bin/python scripts/preflight.py $(if $(FIX),--fix,)
+	@KINGUARD_URL=$${KINGUARD_URL:-http://127.0.0.1:8080} \
+	 uv run python scripts/preflight.py $(if $(FIX),--fix,)
 
 booking-mode:  ## Show or set whether the booker submits for real (MODE=dry|live)
 	@bash .claude/skills/booking-mode/scripts/booking-mode.sh $(or $(MODE),status)
 
 debris:  ## Show what rehearsing left on the demo record (add APPLY=1 --backup to clear it)
-	@./.venv/bin/python scripts/clear_rehearsal_debris.py \
+	@uv run python scripts/clear_rehearsal_debris.py \
 	 $(if $(BACKUP),--backup $(BACKUP),) $(if $(APPLY),--apply,)
 
 breach-seed:  ## Seed an already-lapsed cashless clock for the breach beat (demo only)

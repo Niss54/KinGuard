@@ -292,7 +292,7 @@ def test_a_photographed_report_closes_the_test_end_to_end(case, monkeypatch):
     monkeypatch.setattr(gcs, "store", lambda filename, data, content_type="": StoredArtifact(
         stored=True, url="https://signed/x", object_name=f"artifacts/{filename}",
         detail="stub", expires_in_seconds=900))
-    monkeypatch.setenv("ANBU_DOC_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DOC_VISION_MODE", "gemini")
     monkeypatch.setattr(dv, "_call_model", lambda image, mime_type: json.dumps({
         "kind": "lab_report", "confidence": 0.95, "unreadable": False,
         "patient_name": "Ashanthi Machado",
@@ -324,7 +324,7 @@ def test_a_photographed_prescription_closes_nothing_end_to_end(case, monkeypatch
     monkeypatch.setattr(gcs, "store", lambda filename, data, content_type="": StoredArtifact(
         stored=True, url="https://signed/x", object_name=f"artifacts/{filename}",
         detail="stub", expires_in_seconds=900))
-    monkeypatch.setenv("ANBU_DOC_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DOC_VISION_MODE", "gemini")
     monkeypatch.setattr(dv, "_call_model", lambda image, mime_type: json.dumps({
         "kind": "prescription", "confidence": 0.95, "unreadable": False,
         "patient_name": "Ashanthi Machado",

@@ -66,7 +66,7 @@ ALLOWED_EXTERNAL = ("https://www.google.com/maps/",)
 
 
 def _base() -> str:
-    return os.getenv("ANBU_PUBLIC_BASE_URL", "").rstrip("/")
+    return os.getenv("KINGUARD_PUBLIC_BASE_URL", "").rstrip("/")
 
 
 def _new_code() -> str:

@@ -7,7 +7,7 @@ English alert is a narrator saying so. The narration is the problem: it makes
 the viewer take on trust the exact thing the demo is trying to show, which is
 that these are separate people with separate consent and separate content.
 
-So when ANBU_DEMO_ROLE_TAGS is on, every outbound message carries one line
+So when KINGUARD_DEMO_ROLE_TAGS is on, every outbound message carries one line
 naming its addressee. It is a caption on a screen recording, nothing more.
 
 Three rules keep it from becoming a lie:
@@ -50,7 +50,7 @@ MARKS: dict[str, tuple[str, str]] = {
 
 def enabled() -> bool:
     """Off unless switched on, and only the affirmative words count."""
-    return os.getenv("ANBU_DEMO_ROLE_TAGS", "off").strip().lower() in {
+    return os.getenv("KINGUARD_DEMO_ROLE_TAGS", "off").strip().lower() in {
         "1", "on", "true", "yes"}
 
 

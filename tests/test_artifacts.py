@@ -121,7 +121,7 @@ def test_indian_digit_grouping():
 def test_storage_without_a_bucket_reports_no_link(monkeypatch):
     from kinguard.comms import storage
 
-    monkeypatch.delenv("ANBU_ARTIFACT_BUCKET", raising=False)
+    monkeypatch.delenv("KINGUARD_ARTIFACT_BUCKET", raising=False)
     result = storage.store("x.pdf", b"%PDF-1.4")
     assert result.stored is False
     assert result.url is None
@@ -132,7 +132,7 @@ def test_storage_failure_does_not_produce_a_url(monkeypatch):
     """A failed upload must not leave a caller holding a link to nothing."""
     from kinguard.comms import storage
 
-    monkeypatch.setenv("ANBU_ARTIFACT_BUCKET", "bucket-that-does-not-exist")
+    monkeypatch.setenv("KINGUARD_ARTIFACT_BUCKET", "bucket-that-does-not-exist")
 
     class Boom:
         def __init__(self, *a, **k):
@@ -210,7 +210,7 @@ def test_a_blocked_message_attaches_nothing(seeded_case, monkeypatch):
 
 def test_no_bucket_means_no_attachment_and_no_false_claim(seeded_case, monkeypatch):
     """Storage unavailable must degrade to a plain message, not a broken one."""
-    monkeypatch.delenv("ANBU_ARTIFACT_BUCKET", raising=False)
+    monkeypatch.delenv("KINGUARD_ARTIFACT_BUCKET", raising=False)
     parent_id, case_id = seeded_case
     result = _send(parent_id, case_id, "resting comfortably", attach=True)
 
@@ -331,7 +331,7 @@ def test_signing_refuses_rather_than_guessing_an_address(monkeypatch):
 
     monkeypatch.setattr("google.auth.default", lambda: (FakeCreds(), "proj"))
     monkeypatch.setattr(storage, "_runtime_service_account", lambda: None)
-    monkeypatch.delenv("ANBU_SIGNER_SERVICE_ACCOUNT", raising=False)
+    monkeypatch.delenv("KINGUARD_SIGNER_SERVICE_ACCOUNT", raising=False)
 
     with pytest.raises(RuntimeError, match="no signer address could be resolved"):
         storage._signing_kwargs()

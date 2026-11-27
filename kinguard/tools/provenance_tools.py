@@ -23,17 +23,18 @@ def verify_case_chain(case_id: str) -> dict[str, Any]:
     """
     result = service.verify_case(case_id)
     signer = load_signer()
+    empty = result.length == 0
     return {
-        "status": "ok",
+        "status": "error" if empty else "ok",
         "case_id": case_id,
-        "verified": result.ok,
+        "verified": False if empty else result.ok,
         "receipt_count": result.length,
         "broken_at_seq": result.broken_at,
-        "reason": result.reason,
+        "reason": f"no receipts for case {case_id}" if empty else result.reason,
         "public_key": signer.public_key_b64,
         "key_warning": (
             "Signing key is ephemeral — chains cannot be verified across restarts. "
-            "Set ANBU_SIGNING_KEY_B64 before recording a demo."
+            "Set KINGUARD_SIGNING_KEY_B64 before recording a demo."
             if signer.ephemeral
             else None
         ),

@@ -41,7 +41,7 @@
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2040 1245" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7d8b9c"/></marker></defs><rect width="2040" height="1245" fill="#ffffff"/><text x="60" y="62" text-anchor="start" font-size="34" fill="#0b1c30" font-weight="700">KinGuard</text>
 <text x="60" y="96" text-anchor="start" font-size="16" fill="#0d7d70" font-weight="700">Autonomous eldercare &amp; insurance coordination for NRI families</text>
 <text x="60" y="124" text-anchor="start" font-size="14" fill="#4d5c6e" font-weight="400">One Tamil voice note or Hybrid AI web intake. Her son is told, the neighbour gets a bedside link, cashless cover is filed against her policy and a 1-hour regulatory clock starts.</text>
-<text x="60" y="148" text-anchor="start" font-size="12.5" fill="#7d8b9c" font-weight="400">Firebase AI Logic (PREFER_ON_DEVICE)  ·  Firebase App Check  ·  5 agents on Google ADK  ·  Gemini on Vertex AI  ·  Cloud Run, asia-south1  ·  1,266 tests</text>
+<text x="60" y="148" text-anchor="start" font-size="12.5" fill="#7d8b9c" font-weight="400">Firebase AI Logic (PREFER_ON_DEVICE)  ·  Firebase App Check  ·  5 agents on Google ADK  ·  Gemini on Vertex AI  ·  Cloud Run (template), asia-south1  ·  1,279 tests</text>
 <line x1="60" y1="172" x2="1980" y2="172" stroke="#e3e8f0" stroke-width="1"/>
 <text x="60" y="196" text-anchor="start" font-size="12" fill="#4d5c6e" font-weight="700">FULL SYSTEM  ·  HYBRID CLIENT + CLOUD ARCHITECTURE</text>
 <rect x="690" y="216" width="660" height="92" rx="3" fill="#f6f7fb" stroke="#e3e8f0" stroke-width="1.0"/>
@@ -181,8 +181,8 @@
     <div>
       <h2>Google-managed, and the command that proves it</h2>
       <p class="sub">A pillar with no check beside it is a pillar somebody has
-      to take on trust. <code>$URL</code> is
-      https://kinguard-37j4eofpwq-el.a.run.app</p>
+      to take on trust. Set <code>$URL</code> to your deployed Cloud Run URL
+      or <code>http://127.0.0.1:8080</code> locally.</p>
       <table><tr><td class='c0'>Firebase AI Logic</td><td class='c1'>Client-side hybrid inference (firebase/ai v13.4.0, PREFER_ON_DEVICE): Gemini Nano on Chrome with Cloud Gemini 2.5 Flash fallback.</td><td class='c2'>curl -s $URL/api/firebase-config</td></tr>
 <tr><td class='c0'>Firebase App Check</td><td class='c1'>reCAPTCHA Enterprise (and registered debug tokens) protecting client-side Hybrid AI inference calls.</td><td class='c2'>Shown in /api/firebase-config & /app</td></tr>
 <tr><td class='c0'>Cloud Run</td><td class='c1'>Agent API, Twilio webhook, dashboard. A second service runs the headless browser: Chromium will not fit beside the API.</td><td class='c2'>gcloud run services list --region asia-south1</td></tr>
@@ -198,7 +198,7 @@
       <h2>What this system will not do</h2>
       <p class="sub">Each of these is enforced in code rather than asked for in
       a prompt, and each has a test that fails if the guard is removed.</p>
-      <table class="refusals"><tr><td class='c0'>Client Hybrid AI never decides severity</td><td class='c1'>On-device Gemini Nano normalises noisy text and masks PII only. Both extracted terms and raw text pass through deterministic RED_FLAGS on Cloud Run.</td></tr>
+      <table class="refusals"><tr><td class='c0'>Client Hybrid AI never decides severity</td><td class='c1'>Client-side regex (maskPII) redacts direct PII in-browser; Firebase AI Logic (PREFER_ON_DEVICE Nano or Cloud fallback) extracts advisory terms only. Deterministic RED_FLAGS always decide severity on the backend.</td></tr>
 <tr><td class='c0'>Severity is never argued down</td><td class='c1'>“She says it’s probably just gas” still returns HIGH. The table that decides severity is code, and never reads that sentence as permission.</td></tr>
 <tr><td class='c0'>Clinical detail never leaves over WhatsApp</td><td class='c1'>The gate classifies the content, not the caller’s claim about it. Bypass the agent and call send() directly: still blocked.</td></tr>
 <tr><td class='c0'>It will not attribute a result it cannot place</td><td class='c1'>Two tests outstanding and one report arriving closes neither. Deciding which would be a model choosing which clinical order was carried out.</td></tr>
@@ -212,7 +212,7 @@
   <p class="foot"><b>Verification is public.</b>
   <code>GET /api/cases/&lt;id&gt;/verify</code> needs no credential, because it
   proves the record was not altered without revealing what it says. Everything
-  that returns content is credentialed. <b>1,266 tests</b>, none needing GCP or
+  that returns content is credentialed. <b>1,279 tests</b>, none needing GCP or
   a model. <b>Simulated:</b> the insurer’s adjudicator, and payments run on a
   real Razorpay link in test mode. <b>Not simulated:</b> WhatsApp, the clinic
   booking, the regulatory clocks, hospital locations, and the receipt chain.</p>

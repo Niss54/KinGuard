@@ -90,7 +90,7 @@ class _Bank:
         m = _RESOURCE.match(resource or "")
         if not m:
             raise ValueError(
-                "ANBU_MEMORY_BANK must be a full Agent Engine resource name, "
+                "KINGUARD_MEMORY_BANK must be a full Agent Engine resource name, "
                 f"projects/<p>/locations/<l>/reasoningEngines/<id>, got: {resource!r}"
             )
         self.resource = resource

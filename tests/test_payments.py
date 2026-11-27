@@ -511,7 +511,7 @@ def _bill_reads(monkeypatch, *, balance_due, vendor="Sacred Heart Hospital",
     from kinguard.comms.storage import StoredArtifact
     from kinguard.docvision import read as docvision_read
 
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(bill_vision, "_call_model", lambda image, mime_type: json.dumps({
         "vendor": vendor, "payee_vpa": payee_vpa, "bill_date": "2026-08-20",
         "stated_total_inr": total, "balance_due_inr": balance_due,
@@ -871,7 +871,7 @@ def test_a_bill_already_on_file_can_be_put_to_the_enforcer(case, monkeypatch):
     _mandate(case_id, parent_id)                     # granted afterwards
 
     client = TestClient(app)
-    headers = {"Authorization": "Bearer anbu-demo-family-token"}
+    headers = {"Authorization": "Bearer kinguard-demo-family-token"}
     result = client.post(f"/api/cases/{case_id}/bills/{bill.bill_id}/consider",
                          headers=headers).json()
 
@@ -949,7 +949,7 @@ def test_a_bill_with_no_balance_is_not_put_to_the_enforcer(case, monkeypatch):
 
     result = TestClient(app).post(
         f"/api/cases/{case_id}/bills/{bill.bill_id}/consider",
-        headers={"Authorization": "Bearer anbu-demo-family-token"}).json()
+        headers={"Authorization": "Bearer kinguard-demo-family-token"}).json()
     assert result["outcome"] == "nothing_due"
     assert service.list_payments(case_id) == []
 
@@ -1369,7 +1369,7 @@ def test_a_payout_that_settled_says_so_and_names_the_rail(case, monkeypatch):
     carried it: "settled" on a simulated payout and "settled" on a live one are
     different claims, and the family is entitled to know which they just read.
     """
-    monkeypatch.setenv("ANBU_PAYMENT_MODE", "payout")
+    monkeypatch.setenv("KINGUARD_PAYMENT_MODE", "payout")
 
     from kinguard.bills import ingest_bill_image
     from kinguard.server import _consider_payment
@@ -1521,7 +1521,7 @@ def test_the_label_follows_the_mode_not_the_intention(monkeypatch):
     because what it does is what it should say."""
     from kinguard.payments import settlement
 
-    monkeypatch.setenv("ANBU_PAYMENT_MODE", "razorpay")
+    monkeypatch.setenv("KINGUARD_PAYMENT_MODE", "razorpay")
     monkeypatch.delenv("RAZORPAY_KEY_ID", raising=False)
     assert "simulated" in settlement.label().lower()
 
@@ -1632,7 +1632,7 @@ def test_the_link_is_a_page_a_person_can_open(monkeypatch):
 
 
 def _payout_case(monkeypatch, case, amount=31_650, per_bill=50_000):
-    monkeypatch.setenv("ANBU_PAYMENT_MODE", "payout")
+    monkeypatch.setenv("KINGUARD_PAYMENT_MODE", "payout")
     from kinguard.payments import consider_bill
 
     parent_id, case_id = case
@@ -1702,7 +1702,7 @@ def test_the_payout_rail_is_still_subject_to_every_guard(case, monkeypatch):
 
 
 def test_a_payout_never_claims_money_moved(monkeypatch):
-    monkeypatch.setenv("ANBU_PAYMENT_MODE", "payout")
+    monkeypatch.setenv("KINGUARD_PAYMENT_MODE", "payout")
     from kinguard.payments import settlement
 
     assert settlement.rail() == "payout-simulated"
@@ -1716,7 +1716,7 @@ def test_a_payout_never_claims_money_moved(monkeypatch):
 
 
 def _x_keys(monkeypatch, key="rzp_test_X"):
-    monkeypatch.setenv("ANBU_PAYMENT_MODE", "razorpayx")
+    monkeypatch.setenv("KINGUARD_PAYMENT_MODE", "razorpayx")
     monkeypatch.setenv("RAZORPAYX_KEY_ID", key)
     monkeypatch.setenv("RAZORPAYX_KEY_SECRET", "secret")
     monkeypatch.setenv("RAZORPAYX_ACCOUNT_NUMBER", "2323230099089860")
@@ -1830,7 +1830,7 @@ def test_a_live_razorpayx_key_is_refused(monkeypatch):
 
 def test_razorpayx_without_keys_falls_back_and_says_so(monkeypatch):
     """Configured to use a rail we cannot reach must not report using it."""
-    monkeypatch.setenv("ANBU_PAYMENT_MODE", "razorpayx")
+    monkeypatch.setenv("KINGUARD_PAYMENT_MODE", "razorpayx")
     for name in ("RAZORPAYX_KEY_ID", "RAZORPAYX_KEY_SECRET",
                  "RAZORPAYX_ACCOUNT_NUMBER"):
         monkeypatch.delenv(name, raising=False)
@@ -2053,7 +2053,7 @@ def test_a_case_opened_after_the_grant_can_pay_without_waking_anyone(case, monke
     cannot be in it: a case opens at 3am while he is asleep eleven time zones
     away, and until he wakes and grants something the payment lane is dead.
     """
-    monkeypatch.setenv("ANBU_PAYMENT_MODE", "payout")
+    monkeypatch.setenv("KINGUARD_PAYMENT_MODE", "payout")
     parent_id, _first = case
     _standing(parent_id)
 
@@ -2089,7 +2089,7 @@ def test_one_authorisation_does_not_become_several(case, monkeypatch):
     signature into as many as there are admissions, with every individual
     decision looking correct.
     """
-    monkeypatch.setenv("ANBU_PAYMENT_MODE", "payout")
+    monkeypatch.setenv("KINGUARD_PAYMENT_MODE", "payout")
     parent_id, first = case
     _standing(parent_id, per_bill=80_000, total=100_000)
 

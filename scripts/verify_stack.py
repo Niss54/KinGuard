@@ -30,10 +30,10 @@ def check_vertex() -> bool:
         client = genai.Client(vertexai=True, project=cfg.project_id, location=cfg.location)
         response = client.models.generate_content(
             model=cfg.model,
-            contents="Reply with exactly: ANBU_OK",
+            contents="Reply with exactly: KINGUARD_OK",
         )
         text = (response.text or "").strip()
-        if "ANBU_OK" in text:
+        if "KINGUARD_OK" in text:
             return report("Vertex AI + Gemini", PASS, f"{cfg.model} responded in {cfg.location}")
         return report("Vertex AI + Gemini", WARN, f"{cfg.model} responded, unexpected text: {text[:60]!r}")
     except Exception as exc:  # noqa: BLE001 - we want the reason, whatever it is
@@ -43,7 +43,7 @@ def check_vertex() -> bool:
 def check_firestore() -> bool:
     cfg = settings()
     if cfg.use_memory_store:
-        return report("Firestore", WARN, "ANBU_STORE_BACKEND=memory — Firestore not exercised")
+        return report("Firestore", WARN, "KINGUARD_STORE_BACKEND=memory — Firestore not exercised")
     try:
         from kinguard.provenance.store import FirestoreStore
 
@@ -65,7 +65,7 @@ def check_firestore() -> bool:
 def check_pubsub() -> bool:
     cfg = settings()
     if not cfg.pubsub_enabled:
-        return report("Pub/Sub", WARN, "ANBU_PUBSUB_ENABLED=false — publishing is a no-op")
+        return report("Pub/Sub", WARN, "KINGUARD_PUBSUB_ENABLED=false — publishing is a no-op")
     try:
         from google.cloud import pubsub_v1
 

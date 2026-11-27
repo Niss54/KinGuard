@@ -137,7 +137,7 @@ class DriverError(Exception):
 
 def dry_run() -> bool:
     """Default TRUE. Booking for real is a deliberate act, not a default."""
-    return os.getenv("ANBU_BOOKING_DRYRUN", "1").strip().lower() not in {
+    return os.getenv("KINGUARD_BOOKING_DRYRUN", "1").strip().lower() not in {
         "0", "false", "no", "off",
     }
 
@@ -153,7 +153,7 @@ def robots_allows(url: str) -> tuple[bool, str]:
     fetch is treated as ALLOWED, because an unreachable robots.txt is an absence
     of instruction rather than a refusal.
     """
-    if os.getenv("ANBU_BOOKING_IGNORE_ROBOTS", "").strip().lower() in {"1", "true"}:
+    if os.getenv("KINGUARD_BOOKING_IGNORE_ROBOTS", "").strip().lower() in {"1", "true"}:
         return True, "robots.txt was not consulted on this deployment"
     try:
         parts = urllib.parse.urlsplit(url)
@@ -285,7 +285,7 @@ def _cancel_path(page, fallback_phone: str) -> tuple[str, str]:
 
 def _read_form(page) -> dict:
     """Ask Gemini what goes where. Its answer is a proposal, not an instruction."""
-    if os.getenv("ANBU_BOOKING_READER", "gemini").lower() in {"off", "none"}:
+    if os.getenv("KINGUARD_BOOKING_READER", "gemini").lower() in {"off", "none"}:
         raise DriverError("form reading is switched off on this deployment")
 
     from google import genai
@@ -298,7 +298,7 @@ def _read_form(page) -> dict:
 
     client = genai.Client()
     response = client.models.generate_content(
-        model=os.getenv("ANBU_MODEL", "gemini-3.5-flash"),
+        model=os.getenv("KINGUARD_MODEL", "gemini-3.5-flash"),
         contents=[f"{_PROMPT}\n\nThe page HTML:\n{html}"],
     )
     raw = (response.text or "").strip()
@@ -483,7 +483,7 @@ def _open(playwright, url: str):
     context = browser.new_context(
         viewport={"width": 1280, "height": 1600},
         user_agent=os.getenv(
-            "ANBU_BOOKING_UA",
+            "KINGUARD_BOOKING_UA",
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/124.0 Safari/537.36 KinGuard/1.0"),
     )
@@ -773,7 +773,7 @@ def commit(*, url: str, payload: dict, handle: dict,
                     "outcome": "unavailable",
                     "detail": ("DRY RUN: the form was filled with "
                                f"{', '.join(sorted(filled)) or 'nothing'} and NOT "
-                               "submitted. Set ANBU_BOOKING_DRYRUN=0 to book for "
+                               "submitted. Set KINGUARD_BOOKING_DRYRUN=0 to book for "
                                "real."),
                     "cancel_url": cancel_url, "cancel_phone": cancel_phone,
                     "evidence": _shot(page, "dryrun"),
@@ -1232,7 +1232,7 @@ def _shot(page, label: str) -> str:
     Never raises. A booking that happened and could not be photographed is
     still a booking, and losing the screenshot must not lose the appointment.
     """
-    bucket = os.getenv("ANBU_ARTIFACT_BUCKET", "")
+    bucket = os.getenv("KINGUARD_ARTIFACT_BUCKET", "")
     if not bucket:
         logger.info("no artifact bucket; the booking will have no evidence")
         return ""

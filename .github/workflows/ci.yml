@@ -24,11 +24,11 @@ jobs:
         # The suite runs entirely on the in-memory store — no GCP credentials,
         # no model access, no network.
         env:
-          ANBU_STORE_BACKEND: memory
+          KINGUARD_STORE_BACKEND: memory
           PYTHONUTF8: "1"
         run: uv run pytest -q
 
       - name: End-to-end spine
         env:
-          ANBU_STORE_BACKEND: memory
+          KINGUARD_STORE_BACKEND: memory
         run: uv run python scripts/demo_spine.py

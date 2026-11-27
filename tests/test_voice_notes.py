@@ -146,7 +146,7 @@ def test_implausible_audio_is_refused_without_calling_a_model(audio, why):
 
 
 def test_transcription_off_reports_itself(monkeypatch):
-    monkeypatch.setenv("ANBU_TRANSCRIBE_MODE", "off")
+    monkeypatch.setenv("KINGUARD_TRANSCRIBE_MODE", "off")
     result = transcribe.transcribe(b"x" * 5000)
     assert result.ok is False
     assert "switched off" in result.detail
@@ -154,7 +154,7 @@ def test_transcription_off_reports_itself(monkeypatch):
 
 def test_a_model_failure_keeps_the_recording(monkeypatch):
     """Never raises. A caller that gets `unclear` tells somebody to listen."""
-    monkeypatch.setenv("ANBU_TRANSCRIBE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSCRIBE_MODE", "gemini")
 
     def explode(*a, **k):
         raise RuntimeError("no credentials")

@@ -12,13 +12,15 @@ name into a form on request is not something to leave open to the internet.
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import os
+import socket
 import time
-
-from fastapi import Body, FastAPI
+import urllib.parse
 
 import driver
+from fastapi import Body, FastAPI
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("booker")
@@ -32,10 +34,46 @@ _RECENT: dict[str, float] = {}
 REPLAY_WINDOW_SECONDS = 600
 
 
+def _validate_target_url(url: str) -> str | None:
+    """Reject non-HTTP schemes and private/metadata destinations (SSRF defense)."""
+    if not url or not url.startswith(("http://", "https://")):
+        return "no usable website for this centre"
+    parts = urllib.parse.urlsplit(url)
+    host = (parts.hostname or "").strip().lower()
+    if not host:
+        return "no usable website for this centre"
+    if os.getenv("KINGUARD_BOOKING_ALLOW_PRIVATE", "").strip() in {"1", "true", "on"}:
+        return None
+    if host in {"localhost", "metadata", "metadata.google.internal"} or host.endswith(
+        (".internal", ".local", ".localhost")
+    ):
+        return "refusing private or internal booking target"
+    try:
+        infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80), type=socket.SOCK_STREAM)
+    except OSError:
+        # Unreachable or test-only hostnames (e.g. .invalid) still check literal IPs.
+        try:
+            ip = ipaddress.ip_address(host.strip("[]"))
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
+                return "refusing private or internal booking target"
+        except ValueError:
+            pass
+        return None
+    for info in infos:
+        addr = info[4][0].split("%", 1)[0]
+        try:
+            ip = ipaddress.ip_address(addr)
+        except ValueError:
+            continue
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
+            return "refusing private or internal booking target"
+    return None
+
+
 @app.get("/healthz")
 def healthz() -> dict:
     return {"status": "ok", "dry_run": driver.dry_run(),
-            "reader": os.getenv("ANBU_BOOKING_READER", "gemini")}
+            "reader": os.getenv("KINGUARD_BOOKING_READER", "gemini")}
 
 
 # NOT async. Playwright's sync API refuses to run inside an asyncio loop, and
@@ -58,8 +96,9 @@ def state(body: dict = Body(default_factory=dict)) -> dict:
 @app.post("/prepare")
 def prepare(body: dict = Body(default_factory=dict)) -> dict:
     url = str(body.get("url") or "")
-    if not url.startswith(("http://", "https://")):
-        return {"outcome": "unavailable", "detail": "no usable website for this centre"}
+    blocked = _validate_target_url(url)
+    if blocked:
+        return {"outcome": "unavailable", "detail": blocked}
     try:
         return driver.prepare(url=url, payload=dict(body.get("payload") or {}),
                               fallback_phone=str(body.get("fallback_phone") or ""))
@@ -72,6 +111,9 @@ def prepare(body: dict = Body(default_factory=dict)) -> dict:
 @app.post("/commit")
 def commit(body: dict = Body(default_factory=dict)) -> dict:
     url = str(body.get("url") or "")
+    blocked = _validate_target_url(url)
+    if blocked:
+        return {"outcome": "unavailable", "detail": blocked}
     key = str(body.get("idempotency_key") or "")
 
     now = time.time()

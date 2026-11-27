@@ -98,8 +98,9 @@ MANAGED = [
 # do is checkable in a way that a system defined by its features is not.
 REFUSALS = [
     ("Client Hybrid AI never decides severity",
-     ("On-device Gemini Nano normalises noisy text and masks PII only. Both "
-      "extracted terms and raw text pass through deterministic RED_FLAGS on Cloud Run.")),
+     ("Client-side regex (maskPII) redacts direct PII in-browser; Firebase AI "
+      "Logic (PREFER_ON_DEVICE Nano or Cloud fallback) extracts advisory terms "
+      "only. Deterministic RED_FLAGS always decide severity on the backend.")),
     ("Severity is never argued down",
      ("“She says it’s probably just gas” still returns HIGH. The "
      "table that decides severity is code, and never reads that sentence as "
@@ -197,8 +198,8 @@ def build_html() -> str:
     <div>
       <h2>Google-managed, and the command that proves it</h2>
       <p class="sub">A pillar with no check beside it is a pillar somebody has
-      to take on trust. <code>$URL</code> is
-      https://kinguard-37j4eofpwq-el.a.run.app</p>
+      to take on trust. Set <code>$URL</code> to your deployed Cloud Run URL
+      or <code>http://127.0.0.1:8080</code> locally.</p>
       <table>{managed}</table>
     </div>
     <div>
@@ -211,7 +212,7 @@ def build_html() -> str:
   <p class="foot"><b>Verification is public.</b>
   <code>GET /api/cases/&lt;id&gt;/verify</code> needs no credential, because it
   proves the record was not altered without revealing what it says. Everything
-  that returns content is credentialed. <b>1,266 tests</b>, none needing GCP or
+  that returns content is credentialed. <b>1,279 tests</b>, none needing GCP or
   a model. <b>Simulated:</b> the insurer’s adjudicator, and payments run on a
   real Razorpay link in test mode. <b>Not simulated:</b> WhatsApp, the clinic
   booking, the regulatory clocks, hospital locations, and the receipt chain.</p>

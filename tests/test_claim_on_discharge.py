@@ -66,7 +66,7 @@ def _bill(monkeypatch, case_id, parent_id, total=96_000):
     from kinguard.bills import ingest_bill_image
     from kinguard.docvision import read as dv
 
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(bill_vision, "_call_model", lambda i, m: json.dumps({
         "vendor": "Sacred Heart Hospital", "payee_vpa": None,
         "bill_date": "2026-08-22", "stated_total_inr": total,

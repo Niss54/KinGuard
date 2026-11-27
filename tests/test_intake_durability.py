@@ -126,7 +126,7 @@ def test_no_bucket_means_no_false_promise_of_durability(parent_id, monkeypatch):
     from kinguard.comms import storage
 
     monkeypatch.setattr(storage, "store", lambda *a, **k: storage.StoredArtifact(
-        stored=False, url=None, detail="ANBU_ARTIFACT_BUCKET is not set"))
+        stored=False, url=None, detail="KINGUARD_ARTIFACT_BUCKET is not set"))
 
     assert intake_ledger.record(parent_id, "case-x", PNG, "image/png") is None
 
@@ -190,17 +190,17 @@ def test_the_family_clock_is_configured_not_hardcoded(monkeypatch):
     """
     from kinguard import server
 
-    monkeypatch.setenv("ANBU_DEMO_FAMILY_TZ", "America/Chicago")
+    monkeypatch.setenv("KINGUARD_DEMO_FAMILY_TZ", "America/Chicago")
     assert server._demo_family_timezone() == "America/Chicago"
 
-    monkeypatch.setenv("ANBU_DEMO_FAMILY_TZ", "Asia/Kolkata")
+    monkeypatch.setenv("KINGUARD_DEMO_FAMILY_TZ", "Asia/Kolkata")
     assert server._demo_family_timezone() == "Asia/Kolkata"
 
 
 def test_an_unusable_zone_degrades_to_utc_rather_than_another_wrong_one(monkeypatch):
     from kinguard import server
 
-    monkeypatch.setenv("ANBU_DEMO_FAMILY_TZ", "Pacific/Nowhere")
+    monkeypatch.setenv("KINGUARD_DEMO_FAMILY_TZ", "Pacific/Nowhere")
     assert server._demo_family_timezone() == "UTC"
 
 
@@ -256,7 +256,7 @@ def test_seeding_twice_does_not_mint_a_second_family(monkeypatch):
 
     from kinguard import server, service
 
-    monkeypatch.setenv("ANBU_DEMO_FAMILY_E164", "+16692167706")
+    monkeypatch.setenv("KINGUARD_DEMO_FAMILY_E164", "+16692167706")
 
     with TestClient(server.app) as client:
         first = client.post("/api/demo/seed").json()["parent_id"]
@@ -272,7 +272,7 @@ def test_a_re_seed_keeps_the_history_already_on_the_record(monkeypatch):
 
     from kinguard import server, service
 
-    monkeypatch.setenv("ANBU_DEMO_FAMILY_E164", "+16692167706")
+    monkeypatch.setenv("KINGUARD_DEMO_FAMILY_E164", "+16692167706")
 
     with TestClient(server.app) as client:
         parent_id = client.post("/api/demo/seed").json()["parent_id"]

@@ -175,7 +175,7 @@ def _parse(raw: str) -> dict | None:
 
 def read(image: bytes, mime_type: str = "image/jpeg") -> Reading:
     """Classify and extract in one call. Never raises; a failure is an answer."""
-    if os.getenv("ANBU_DOC_VISION_MODE", "gemini").strip().lower() in {"off", "none", "false"}:
+    if os.getenv("KINGUARD_DOC_VISION_MODE", "gemini").strip().lower() in {"off", "none", "false"}:
         return Reading(ok=False, engine="off",
                        detail="document reading is switched off; nothing was read")
 

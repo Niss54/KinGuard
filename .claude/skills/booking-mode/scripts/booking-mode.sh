@@ -31,7 +31,7 @@ quietly() {
 reading() {
   gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT" \
     --format='value(spec.template.spec.containers[0].env)' 2>/dev/null \
-    | tr ';' '\n' | sed -n "s/.*'name': 'ANBU_BOOKING_DRYRUN', 'value': '\([01]\)'.*/\1/p"
+    | tr ';' '\n' | sed -n "s/.*'name': 'KINGUARD_BOOKING_DRYRUN', 'value': '\([01]\)'.*/\1/p"
 }
 
 report() {
@@ -54,12 +54,12 @@ case "$MODE" in
     ;;
   dry|off|safe)
     quietly gcloud run services update "$SERVICE" --region "$REGION" \
-      --project "$PROJECT" --update-env-vars ANBU_BOOKING_DRYRUN=1 --quiet
+      --project "$PROJECT" --update-env-vars KINGUARD_BOOKING_DRYRUN=1 --quiet
     echo; report; echo
     ;;
   live|real|on)
     quietly gcloud run services update "$SERVICE" --region "$REGION" \
-      --project "$PROJECT" --update-env-vars ANBU_BOOKING_DRYRUN=0 --quiet
+      --project "$PROJECT" --update-env-vars KINGUARD_BOOKING_DRYRUN=0 --quiet
     echo; report
     printf "  ${A}every arrange from here books a real clinic. cancel what you book.${O}\n\n"
     ;;

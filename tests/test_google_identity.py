@@ -60,7 +60,7 @@ def case_id(parent_id) -> str:
 
 def _google_says(monkeypatch, claims):
     """Pin what Google's verifier returns, at the one seam that calls it."""
-    monkeypatch.setenv("ANBU_GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com")
+    monkeypatch.setenv("KINGUARD_GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com")
     monkeypatch.setattr(webauth, "verify_google_identity", lambda token: claims)
 
 
@@ -91,7 +91,7 @@ def test_a_token_is_verified_against_googles_keys_not_decoded_here():
 
 
 def test_google_sign_in_is_off_when_no_client_id_is_configured(monkeypatch):
-    monkeypatch.delenv("ANBU_GOOGLE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("KINGUARD_GOOGLE_CLIENT_ID", raising=False)
     assert webauth.google_client_id() is None
     assert webauth.verify_google_identity("a.b.c") is None
 
@@ -99,7 +99,7 @@ def test_google_sign_in_is_off_when_no_client_id_is_configured(monkeypatch):
 def test_an_unverified_email_is_not_an_identity(monkeypatch, client, parent_id):
     """An unverified address is a string somebody typed, and this one decides
     whose medical record opens."""
-    monkeypatch.setenv("ANBU_GOOGLE_CLIENT_ID", "test-client-id")
+    monkeypatch.setenv("KINGUARD_GOOGLE_CLIENT_ID", "test-client-id")
     monkeypatch.setattr(
         "google.oauth2.id_token.verify_oauth2_token",
         lambda *a, **k: {"sub": "x", "email": FAMILY_EMAIL, "email_verified": False})
@@ -109,7 +109,7 @@ def test_an_unverified_email_is_not_an_identity(monkeypatch, client, parent_id):
 
 
 def test_a_token_google_rejects_is_not_a_session(monkeypatch, client, parent_id):
-    monkeypatch.setenv("ANBU_GOOGLE_CLIENT_ID", "test-client-id")
+    monkeypatch.setenv("KINGUARD_GOOGLE_CLIENT_ID", "test-client-id")
 
     def refuse(*args, **kwargs):
         raise ValueError("Token expired")
@@ -233,7 +233,7 @@ def test_whoami_never_401s(client, parent_id, monkeypatch):
 
 
 def test_the_auth_config_says_what_is_offered(client, monkeypatch):
-    monkeypatch.setenv("ANBU_GOOGLE_CLIENT_ID", "abc.apps.googleusercontent.com")
+    monkeypatch.setenv("KINGUARD_GOOGLE_CLIENT_ID", "abc.apps.googleusercontent.com")
     body = client.get("/api/auth-config").json()
     assert body["google_client_id"] == "abc.apps.googleusercontent.com"
     assert body["demo_sign_in"] is True
@@ -315,33 +315,33 @@ def test_the_seeded_family_can_be_bound_to_a_real_account(monkeypatch, client):
     address, the sign-in beat would need a manual link before every take — and
     a step that is easy to forget between takes is a step that will be
     forgotten during one."""
-    monkeypatch.setenv("ANBU_DEMO_FAMILY_EMAIL", "demo@example.com")
+    monkeypatch.setenv("KINGUARD_DEMO_FAMILY_EMAIL", "demo@example.com")
     parent_id = client.post("/api/demo/seed").json()["parent_id"]
 
     profile = client.get(f"/api/parents/{parent_id}",
-                         headers=_auth("anbu-demo-family-token")).json()["profile"]
+                         headers=_auth("kinguard-demo-family-token")).json()["profile"]
     assert profile["family_contacts"][0]["email"] == "demo@example.com"
 
 
 def test_the_seeded_family_cannot_sign_in_by_default(monkeypatch, client):
     """Unset, the seeded contact has no address and therefore no way in.
     Receiving messages and reading the record are separate permissions."""
-    monkeypatch.delenv("ANBU_DEMO_FAMILY_EMAIL", raising=False)
+    monkeypatch.delenv("KINGUARD_DEMO_FAMILY_EMAIL", raising=False)
     parent_id = client.post("/api/demo/seed").json()["parent_id"]
 
     profile = client.get(f"/api/parents/{parent_id}",
-                         headers=_auth("anbu-demo-family-token")).json()["profile"]
+                         headers=_auth("kinguard-demo-family-token")).json()["profile"]
     assert profile["family_contacts"][0]["email"] == ""
 
 
 def test_the_seeded_contact_can_be_named(monkeypatch, client):
     """Whoever records the demo is the person on camera, and the family contact
     should be them rather than a placeholder they have to explain away."""
-    monkeypatch.setenv("ANBU_DEMO_FAMILY_NAME", "Nishant Maurya")
+    monkeypatch.setenv("KINGUARD_DEMO_FAMILY_NAME", "Nishant Maurya")
     parent_id = client.post("/api/demo/seed").json()["parent_id"]
 
     profile = client.get(f"/api/parents/{parent_id}",
-                         headers=_auth("anbu-demo-family-token")).json()["profile"]
+                         headers=_auth("kinguard-demo-family-token")).json()["profile"]
     contact = profile["family_contacts"][0]
     assert contact["name"] == "Nishant Maurya"
     assert contact["relationship"] == "son"
@@ -350,11 +350,11 @@ def test_the_seeded_contact_can_be_named(monkeypatch, client):
 def test_the_default_is_the_author(monkeypatch, client):
     """This is a named project with a named author. The seeded family contact
     is him, not a placeholder standing in for him."""
-    monkeypatch.delenv("ANBU_DEMO_FAMILY_NAME", raising=False)
+    monkeypatch.delenv("KINGUARD_DEMO_FAMILY_NAME", raising=False)
     parent_id = client.post("/api/demo/seed").json()["parent_id"]
 
     profile = client.get(f"/api/parents/{parent_id}",
-                         headers=_auth("anbu-demo-family-token")).json()["profile"]
+                         headers=_auth("kinguard-demo-family-token")).json()["profile"]
     assert profile["family_contacts"][0]["name"] == "Nishant Maurya"
 
 
@@ -364,12 +364,12 @@ def test_a_set_but_empty_override_does_not_erase_the_contact(monkeypatch, client
     set-but-empty variable. That would seed a contact with no name and no
     number, which fails quietly and looks like data loss.
     """
-    for name in ("ANBU_DEMO_FAMILY_NAME", "ANBU_DEMO_FAMILY_E164"):
+    for name in ("KINGUARD_DEMO_FAMILY_NAME", "KINGUARD_DEMO_FAMILY_E164"):
         monkeypatch.setenv(name, "")
     parent_id = client.post("/api/demo/seed").json()["parent_id"]
 
     contact = client.get(f"/api/parents/{parent_id}",
-                         headers=_auth("anbu-demo-family-token")
+                         headers=_auth("kinguard-demo-family-token")
                          ).json()["profile"]["family_contacts"][0]
     assert contact["name"] == "Nishant Maurya"
     assert contact["whatsapp_e164"] == "+14155550142"
@@ -384,9 +384,9 @@ def test_the_scripts_take_the_same_name_override(monkeypatch):
     root = pathlib.Path(__file__).resolve().parents[1] / "scripts"
     for script in ("demo_spine.py", "make_documents.py"):
         source = (root / script).read_text()
-        assert 'os.getenv("ANBU_DEMO_FAMILY_NAME")' in source, script
+        assert 'os.getenv("KINGUARD_DEMO_FAMILY_NAME")' in source, script
         # `or`, never a getenv default, for the set-but-empty reason above.
-        assert 'ANBU_DEMO_FAMILY_NAME", "' not in source, \
+        assert 'KINGUARD_DEMO_FAMILY_NAME", "' not in source, \
             f"{script} uses a getenv default that an empty env var defeats"
 
     # And the placeholder is gone from every script.

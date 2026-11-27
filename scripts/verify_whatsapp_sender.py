@@ -15,7 +15,7 @@ import json
 import os
 import urllib.request
 
-BASE = os.getenv("ANBU_PUBLIC_BASE_URL", "https://kinguard-37j4eofpwq-el.a.run.app")
+BASE = os.getenv("KINGUARD_PUBLIC_BASE_URL", "http://127.0.0.1:8080").rstrip("/")
 EXPECTED_WEBHOOK = f"{BASE}/api/wellbeing/inbound"
 
 

@@ -26,11 +26,7 @@ GENESIS_HASH = "0" * 64
 def trusted_signer_keys() -> set[str]:
     """Return pinned public keys: current signer plus any configured rotated keys."""
     keys = {load_signer().public_key_b64}
-    extra = (
-        os.getenv("KINGUARD_TRUSTED_PUBLIC_KEYS")
-        or os.getenv("ANBU_TRUSTED_PUBLIC_KEYS")
-        or ""
-    ).strip()
+    extra = (os.getenv("KINGUARD_TRUSTED_PUBLIC_KEYS") or "").strip()
     if extra:
         keys.update(k.strip() for k in extra.split(",") if k.strip())
     return keys

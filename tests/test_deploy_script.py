@@ -4,7 +4,7 @@ import pathlib
 
 def test_the_env_var_separator_appears_in_no_value():
     """The deploy died on this. The separator was ^@^ and an email address
-    contains @, so ANBU_DEMO_FAMILY_EMAIL split mid-value and gcloud rejected
+    contains @, so KINGUARD_DEMO_FAMILY_EMAIL split mid-value and gcloud rejected
     the entire flag: "Bad syntax for dict arg: [kinguard.ai]".
 
     It fails loudly, which is the good case — but only after a build. This

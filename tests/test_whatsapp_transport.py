@@ -293,10 +293,10 @@ def test_an_explicit_empty_mode_does_not_inherit_the_ambient_environment(monkeyp
     """A populated .env must not turn an explicit "off" into a live send.
 
     `mode or os.getenv(...)` treated "" as absent and fell through to the
-    environment — so with ANBU_WHATSAPP_MODE=twilio set, code asking for no
+    environment — so with KINGUARD_WHATSAPP_MODE=twilio set, code asking for no
     transport got a real one.
     """
-    monkeypatch.setenv("ANBU_WHATSAPP_MODE", "twilio")
+    monkeypatch.setenv("KINGUARD_WHATSAPP_MODE", "twilio")
     monkeypatch.setenv("TWILIO_ACCOUNT_SID", "AC-test-not-a-real-sid")
     monkeypatch.setenv("TWILIO_AUTH_TOKEN", "test-token-not-real")
 

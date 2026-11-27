@@ -205,7 +205,7 @@ def _parse(raw: str) -> dict | None:
 
 def extract(image: bytes, mime_type: str = "image/jpeg") -> Extraction:
     """Read a bill image. Never raises; a failure is an answer."""
-    if os.getenv("ANBU_BILL_VISION_MODE", "gemini").strip().lower() in {"off", "none", "false"}:
+    if os.getenv("KINGUARD_BILL_VISION_MODE", "gemini").strip().lower() in {"off", "none", "false"}:
         return Extraction(ok=False, engine="off",
                           detail="bill reading is switched off; nothing was read")
 

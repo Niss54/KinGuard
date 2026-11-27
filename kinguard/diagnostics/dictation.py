@@ -95,7 +95,7 @@ class Proposal:
 
 
 def _off() -> bool:
-    return os.getenv("ANBU_DICTATION_MODE", "gemini").strip().lower() in {
+    return os.getenv("KINGUARD_DICTATION_MODE", "gemini").strip().lower() in {
         "off", "none", "false",
     }
 

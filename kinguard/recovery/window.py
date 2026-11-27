@@ -67,14 +67,14 @@ STOPPED = "stopped"
 
 def window_days() -> int:
     try:
-        return max(1, int(os.getenv("ANBU_RECOVERY_WINDOW_DAYS", DEFAULT_WINDOW_DAYS)))
+        return max(1, int(os.getenv("KINGUARD_RECOVERY_WINDOW_DAYS", DEFAULT_WINDOW_DAYS)))
     except ValueError:
         return DEFAULT_WINDOW_DAYS
 
 
 def hour_local() -> int:
     try:
-        return min(23, max(0, int(os.getenv("ANBU_RECOVERY_HOUR", DEFAULT_HOUR_LOCAL))))
+        return min(23, max(0, int(os.getenv("KINGUARD_RECOVERY_HOUR", DEFAULT_HOUR_LOCAL))))
     except ValueError:
         return DEFAULT_HOUR_LOCAL
 

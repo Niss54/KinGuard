@@ -69,7 +69,7 @@ def _reads(monkeypatch, lines=None, stated=None, unreadable=False, reason=None,
         "bill_date": "2026-08-22",
         "unreadable": unreadable, "unreadable_reason": reason,
     }
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model",
                         lambda image, mime_type: json.dumps(payload))
     # The webhook classifies before it routes, so the router is stubbed to say
@@ -359,12 +359,12 @@ def test_a_bill_whose_photograph_cannot_be_stored_is_refused(case_id, parent_id,
     unverifiable figures wearing the authority of a record, which is worse than
     no bill at all — so it is refused rather than degraded.
     """
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model",
                         lambda image, mime_type: json.dumps({"line_items": [ICU]}))
     from kinguard.comms import storage as gcs
     monkeypatch.setattr(gcs, "store", lambda filename, data, content_type="": StoredArtifact(
-        stored=False, url=None, detail="ANBU_ARTIFACT_BUCKET is not set"))
+        stored=False, url=None, detail="KINGUARD_ARTIFACT_BUCKET is not set"))
 
     before = len(service.get_chain(case_id).receipts)
     with pytest.raises(ingest.BillRejected) as rejected:
@@ -382,7 +382,7 @@ def test_a_small_but_legitimate_bill_is_not_refused_for_its_size(monkeypatch):
     refused a perfectly readable bill for compressing well — a worse failure
     than one wasted call on something that turns out not to be a bill.
     """
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model", lambda image, mime_type: json.dumps(
         {"line_items": [ICU], "stated_total_inr": 96_000, "unreadable": False}))
 
@@ -543,7 +543,7 @@ def test_a_discounted_bill_is_not_flagged_as_misread(monkeypatch):
     misread — which the first realistic bill promptly did, by exactly its
     12,000 discount.
     """
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model", lambda image, mime_type: json.dumps({
         "line_items": [ICU, PHARM],                    # 96,000 + 34,500 = 130,500
         "subtotal_inr": 130_500,
@@ -562,7 +562,7 @@ def test_a_discounted_bill_is_not_flagged_as_misread(monkeypatch):
 
 def test_a_bill_without_a_subtotal_reconciles_through_the_total(monkeypatch):
     """Not every bill prints a sub-total; the discount still has to be undone."""
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model", lambda image, mime_type: json.dumps({
         "line_items": [ICU, PHARM],
         "subtotal_inr": None, "discount_inr": 12_000, "tax_inr": 0,
@@ -573,7 +573,7 @@ def test_a_bill_without_a_subtotal_reconciles_through_the_total(monkeypatch):
 
 def test_a_genuine_mismatch_is_still_caught(monkeypatch):
     """The check must still do its job once the false positive is gone."""
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model", lambda image, mime_type: json.dumps({
         "line_items": [ICU],                            # 96,000
         "subtotal_inr": 9_600,                          # a real misread
@@ -713,7 +713,7 @@ def test_the_stay_is_read_off_the_bill_when_no_packet_exists(case_id, parent_id,
     20,000 more than the policy says. Understating coverage is not the safe
     direction; it is just a different wrong number about money.
     """
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model", lambda image, mime_type: json.dumps({
         "line_items": [ICU], "subtotal_inr": 96_000, "stated_total_inr": 96_000,
         "admitted_on": "2026-08-19", "discharged_on": "2026-08-22",
@@ -756,7 +756,7 @@ def test_each_bill_uses_its_own_length_of_stay(case_id, parent_id, monkeypatch):
 
     monkeypatch.setattr(gcs, "store", lambda filename, data, content_type="": StoredArtifact(
         stored=True, url="x", object_name=f"artifacts/{filename}", detail="stub"))
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
 
     def reading(lines, admitted, discharged, total):
         return lambda image, mime_type: json.dumps({
@@ -787,7 +787,7 @@ def test_a_claim_packet_still_overrides_every_bill(case_id, parent_id, monkeypat
 
     monkeypatch.setattr(gcs, "store", lambda filename, data, content_type="": StoredArtifact(
         stored=True, url="x", object_name=f"artifacts/{filename}", detail="stub"))
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model", lambda image, mime_type: json.dumps({
         "line_items": [ICU], "subtotal_inr": 96_000, "stated_total_inr": 96_000,
         "admitted_on": "2026-08-01", "discharged_on": "2026-08-02",  # one day
@@ -838,7 +838,7 @@ def test_the_bill_image_route_is_credentialed_and_the_link_token_works(
 
     # And so does the signed link a family member was sent at 2am, which is the
     # credential they will actually be holding when they tap through.
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-link-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-link-secret")
     token = make_link_token(parent_id, case_id)
     if token:
         via_link = client.get(f"{path}?t={token}&case={case_id}")
@@ -992,7 +992,7 @@ def test_the_adjustments_survive_ingestion(case_id, parent_id, monkeypatch):
         "vendor": "Sacred Heart Hospital", "bill_date": "2026-08-22",
         "unreadable": False, "unreadable_reason": None,
     }
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model", lambda image, mime_type: json.dumps(payload))
     from kinguard.comms import storage as gcs
     monkeypatch.setattr(gcs, "store", lambda filename, data, content_type="": StoredArtifact(
@@ -1046,7 +1046,7 @@ def test_the_split_reconciles_with_the_printed_total(case_id, parent_id, monkeyp
         "stated_total_inr": 370_720, "vendor": "Sacred Heart Hospital",
         "bill_date": "2026-08-22", "unreadable": False, "unreadable_reason": None,
     }
-    monkeypatch.setenv("ANBU_BILL_VISION_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_BILL_VISION_MODE", "gemini")
     monkeypatch.setattr(vision, "_call_model", lambda i, m: json.dumps(payload))
     from kinguard.comms import storage as gcs
     monkeypatch.setattr(gcs, "store", lambda filename, data, content_type="": StoredArtifact(

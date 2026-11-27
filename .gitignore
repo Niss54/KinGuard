@@ -9,12 +9,15 @@ __pycache__/
 # Env & secrets
 .env
 .env.local
+.env.*.local
+.local.env
+local.env
 *.pem
 keys/
 service-account*.json
 
 # Local state
-.anbu/
+.kinguard/
 .adk/
 *.log
 .DS_Store

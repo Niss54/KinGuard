@@ -22,7 +22,7 @@ from kinguard.tools import onboarding_tools, triage_tools
 
 @pytest.fixture(autouse=True)
 def link_secret(monkeypatch):
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-note-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-note-secret")
 
 
 @pytest.fixture
@@ -370,7 +370,7 @@ def test_a_dictation_reply_never_carries_a_reading(monkeypatch):
     Also asserts WHICH prompt was sent — the point of the split is that the
     clinician lane never requests an interpretation at all.
     """
-    monkeypatch.setenv("ANBU_TRANSCRIBE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSCRIBE_MODE", "gemini")
     sent = {}
 
     def _seam(audio, mime_type, prompt, timeout_seconds):
@@ -391,7 +391,7 @@ def test_a_dictation_reply_never_carries_a_reading(monkeypatch):
 
 def test_the_wellbeing_lane_still_sends_its_own_prompt(monkeypatch):
     """The split must not have redirected the emergency lane."""
-    monkeypatch.setenv("ANBU_TRANSCRIBE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSCRIBE_MODE", "gemini")
     sent = {}
 
     def _seam(audio, mime_type, prompt, timeout_seconds):
@@ -411,7 +411,7 @@ def test_the_wellbeing_lane_still_sends_its_own_prompt(monkeypatch):
 
 def test_a_dictation_reply_that_arrives_as_json_does_not_leak_braces(monkeypatch):
     """Belt and braces: a model that ignores the format must not put {} in a note."""
-    monkeypatch.setenv("ANBU_TRANSCRIBE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_TRANSCRIBE_MODE", "gemini")
     monkeypatch.setattr(
         transcribe, "_call_model",
         lambda audio, mime_type, prompt, timeout_seconds:

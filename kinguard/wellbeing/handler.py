@@ -622,7 +622,7 @@ def _hand_the_treating_team_a_link(case_id: str, parent_id: str,
 
     from kinguard.tools import whatsapp_tools
 
-    base = os.getenv("ANBU_PUBLIC_BASE_URL", "").rstrip("/")
+    base = os.getenv("KINGUARD_PUBLIC_BASE_URL", "").rstrip("/")
     params = {
         "parent_name": profile.name.split()[0] if profile.name else "your parent",
         "handoff_url": f"{base}/handoff/{token}" if base else f"/handoff/{token}",

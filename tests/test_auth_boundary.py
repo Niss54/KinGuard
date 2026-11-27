@@ -143,16 +143,16 @@ def test_the_record_is_readable_only_with_the_credential(client, seeded):
         "Bearer",
         "Bearer ",
         "Bearer wrong-token",
-        "Basic anbu-demo-family-token",
-        "anbu-demo-family-token",          # right value, no scheme
-        "Bearer anbu-demo-family-token ",  # trailing space is tolerated
+        "Basic kinguard-demo-family-token",
+        "kinguard-demo-family-token",          # right value, no scheme
+        "Bearer kinguard-demo-family-token ",  # trailing space is tolerated
     ],
 )
 def test_malformed_or_wrong_credentials_are_rejected(client, seeded, header):
     parent_id, _ = seeded
     headers = {"Authorization": header} if header is not None else {}
     response = client.get(f"/api/parents/{parent_id}", headers=headers)
-    expected = 200 if header == "Bearer anbu-demo-family-token " else 401
+    expected = 200 if header == "Bearer kinguard-demo-family-token " else 401
     assert response.status_code == expected, f"{header!r} -> {response.status_code}"
 
 
@@ -397,7 +397,7 @@ def link_secret(monkeypatch):
     environment is empty. CI has no .env, which is exactly the environment
     these tests should be assuming.
     """
-    monkeypatch.setenv("ANBU_LINK_SECRET", "test-boundary-secret")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "test-boundary-secret")
 
 
 def test_a_signed_link_opens_the_health_record_it_was_minted_for(client, seeded,

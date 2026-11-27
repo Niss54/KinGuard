@@ -585,7 +585,7 @@ def test_with_no_driver_configured_it_says_so_rather_than_pretending(case):
 def test_a_channel_never_switches_itself_on(monkeypatch):
     """A driver that can act on her behalf should not be something that
     enabled itself."""
-    monkeypatch.delenv("ANBU_BOOKING_CHANNELS", raising=False)
+    monkeypatch.delenv("KINGUARD_BOOKING_CHANNELS", raising=False)
     assert [d.name for d in channels.available()] == ["none"]
 
 
@@ -698,7 +698,7 @@ def test_the_web_channel_only_drives_a_site_google_named(monkeypatch):
     Same rule as the destination on a payment."""
     from kinguard.booking.web import WebChannel
 
-    monkeypatch.setenv("ANBU_BOOKER_URL", "https://booker.example")
+    monkeypatch.setenv("KINGUARD_BOOKER_URL", "https://booker.example")
     channel = WebChannel()
     assert channel.can_serve({"website": "https://lab.example/book"}) is True
     assert channel.can_serve({"website": ""}) is False
@@ -710,7 +710,7 @@ def test_a_booker_that_is_down_is_unavailable_not_an_error(monkeypatch):
     """Every failure comes back as unavailable so the lane moves on."""
     from kinguard.booking import web
 
-    monkeypatch.setenv("ANBU_BOOKER_URL", "https://booker.invalid")
+    monkeypatch.setenv("KINGUARD_BOOKER_URL", "https://booker.invalid")
     monkeypatch.setattr(web.WebChannel, "_call", lambda *a, **k: None)
 
     prepared = web.WebChannel().prepare(centre={"website": "https://x"}, payload={})
@@ -726,9 +726,9 @@ def test_a_booker_that_is_down_is_unavailable_not_an_error(monkeypatch):
 def test_the_web_channel_is_off_unless_it_is_configured(monkeypatch):
     from kinguard.booking.web import WebChannel
 
-    monkeypatch.delenv("ANBU_BOOKER_URL", raising=False)
+    monkeypatch.delenv("KINGUARD_BOOKER_URL", raising=False)
     assert WebChannel.configured() is False
-    monkeypatch.setenv("ANBU_BOOKING_CHANNELS", "web")
+    monkeypatch.setenv("KINGUARD_BOOKING_CHANNELS", "web")
     assert [d.name for d in channels.available()] == ["none"]
 
 
@@ -805,7 +805,7 @@ def test_a_code_is_only_read_as_one_while_a_request_is_outstanding(case):
     assert otp.live_for(parent_id) is None
     assert otp.looks_like_code("123456") == "123456"
     for not_a_code in ("she took 6 tablets", "temperature is 101 now",
-                       "", "123456 and she is fine", "ANBU-case-x-0-1-ab"):
+                       "", "123456 and she is fine", "KINGUARD-case-x-0-1-ab"):
         assert otp.looks_like_code(not_a_code) == "", not_a_code
 
 
@@ -1227,11 +1227,11 @@ def test_a_map_link_is_shortened_but_a_stranger_is_not(monkeypatch):
     is a literal in that file and never anything a caller passes."""
     from kinguard.comms import shortlinks
 
-    monkeypatch.setenv("ANBU_PUBLIC_BASE_URL", "https://anbu.example.run.app")
+    monkeypatch.setenv("KINGUARD_PUBLIC_BASE_URL", "https://kinguard.example.run.app")
     maps = ("https://www.google.com/maps/search/?api=1&query=AARTHI+SCANS"
             "&query_place_id=ChIJpS-F-MPvAzsRAYdm2Uf2K3k")
     short = shortlinks.shorten(maps)
-    assert short.startswith("https://anbu.example.run.app/s/")
+    assert short.startswith("https://kinguard.example.run.app/s/")
     assert shortlinks.resolve(short.rsplit("/", 1)[-1]) == maps
 
     for hostile in ("https://www.google.com.evil.example/maps/" + "x" * 90,
@@ -1628,7 +1628,7 @@ def test_the_proof_travels_with_the_claim(case, monkeypatch):
     from kinguard.tools import onboarding_tools, whatsapp_tools
 
     parent_id, case_id = case
-    monkeypatch.setenv("ANBU_PUBLIC_BASE_URL", "https://anbu.example")
+    monkeypatch.setenv("KINGUARD_PUBLIC_BASE_URL", "https://kinguard.example")
     onboarding_tools.record_family_contact(
         parent_id=parent_id, name="Nishant Maurya", relationship="son",
         whatsapp_e164="+16692167706", timezone_name="America/Chicago",
@@ -1667,7 +1667,7 @@ def test_a_booking_with_no_photograph_sends_no_dead_link(case, monkeypatch):
     from kinguard.schemas import Appointment
 
     parent_id, case_id = case
-    monkeypatch.setenv("ANBU_PUBLIC_BASE_URL", "https://anbu.example")
+    monkeypatch.setenv("KINGUARD_PUBLIC_BASE_URL", "https://kinguard.example")
     appt = Appointment(appointment_id="a", case_id=case_id, parent_id=parent_id,
                        order_id="o", status="requested", centre_name="X",
                        evidence="")

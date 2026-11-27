@@ -35,8 +35,7 @@ from fastapi import Header, HTTPException, Request
 # A stable demo credential. Deliberately not generated per-boot: the dashboard
 # auto-signs-in with it during the demo, and a rotating value would make the
 # published README instructions wrong.
-DEMO_TOKEN = os.getenv("KINGUARD_DEMO_TOKEN") or os.getenv("ANBU_DEMO_TOKEN", "kinguard-demo-family-token")
-LEGACY_DEMO_TOKEN = "anbu-demo-family-token"
+DEMO_TOKEN = os.getenv("KINGUARD_DEMO_TOKEN") or "kinguard-demo-family-token"
 
 UNAUTHENTICATED_DETAIL = (
     "This endpoint returns case or patient content and requires a family "
@@ -57,7 +56,7 @@ UNAUTHENTICATED_DETAIL = (
 # a secret the caller never sees. It grants exactly what the message promised —
 # this episode and this parent's record — and nothing else.
 LINK_TTL_SECONDS = 24 * 60 * 60      # long enough to cross a timezone and sleep
-LINK_SECRET_ENV = "ANBU_LINK_SECRET"
+LINK_SECRET_ENV = "KINGUARD_LINK_SECRET"
 
 
 def _link_secret() -> bytes | None:
@@ -125,7 +124,7 @@ def link_token_grants(token: str, *, parent_id: str = "", case_id: str = "",
 #                   somebody's mother's lab results.
 #
 # Default deny. An account nobody put on the record gets 403, not a record.
-GOOGLE_CLIENT_ID_ENV = "ANBU_GOOGLE_CLIENT_ID"
+GOOGLE_CLIENT_ID_ENV = "KINGUARD_GOOGLE_CLIENT_ID"
 
 UNAUTHORISED_DETAIL = (
     "That Google account is signed in, but it is not on this parent's list of "
@@ -166,8 +165,14 @@ def verify_google_identity(token: str) -> dict | None:
     return claims
 
 
-def _parent_for(request: Request, case_id_override: str = "") -> str | None:
-    """Which parent this request is asking about, from the path or body."""
+def _parent_for(
+    request: Request,
+    case_id_override: str = "",
+    parent_id_override: str = "",
+) -> str | None:
+    """Which parent this request is asking about, from the path, query, or body."""
+    if parent_id_override:
+        return str(parent_id_override)
     parent_id = request.path_params.get("parent_id")
     if parent_id:
         return str(parent_id)
@@ -204,7 +209,10 @@ def _is_family_contact(parent_id: str, email: str) -> bool:
 
 
 def _google_session(
-    request: Request, presented: str, case_id_override: str = ""
+    request: Request,
+    presented: str,
+    case_id_override: str = "",
+    parent_id_override: str = "",
 ) -> str | None:
     """A verified Google account that is on this parent's contacts, or 401/403.
 
@@ -216,7 +224,11 @@ def _google_session(
     if claims is None:
         return None
 
-    parent_id = _parent_for(request, case_id_override=case_id_override)
+    parent_id = _parent_for(
+        request,
+        case_id_override=case_id_override,
+        parent_id_override=parent_id_override,
+    )
     if parent_id is None or not _is_family_contact(parent_id, claims["email"]):
         # 403, not 401: signing in again will not help, and saying "log in"
         # to someone already logged in sends them round a loop.
@@ -229,16 +241,22 @@ def verify_family_session(
     authorization: str | None,
     *,
     case_id_override: str = "",
+    parent_id_override: str = "",
 ) -> str:
     """Verify a family session bearer token (shared helper for endpoints and Depends)."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail=UNAUTHENTICATED_DETAIL)
 
     presented = authorization.split(" ", 1)[1].strip()
-    if hmac.compare_digest(presented, DEMO_TOKEN) or hmac.compare_digest(presented, LEGACY_DEMO_TOKEN):
+    if hmac.compare_digest(presented, DEMO_TOKEN):
         return presented
 
-    session = _google_session(request, presented, case_id_override=case_id_override)
+    session = _google_session(
+        request,
+        presented,
+        case_id_override=case_id_override,
+        parent_id_override=parent_id_override,
+    )
     if session is not None:
         return session
 
@@ -255,13 +273,13 @@ def require_family_session(request: Request,
     return verify_family_session(request, authorization)
 
 
-def require_adk_session(authorization: str | None) -> str:
+def require_adk_session(authorization: str | None, path: str = "") -> str:
     """Authorize ADK session, artifact, memory, and agent-run routes."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail=UNAUTHENTICATED_DETAIL)
 
     presented = authorization.split(" ", 1)[1].strip()
-    if hmac.compare_digest(presented, DEMO_TOKEN) or hmac.compare_digest(presented, LEGACY_DEMO_TOKEN):
+    if hmac.compare_digest(presented, DEMO_TOKEN):
         return presented
 
     claims = verify_google_identity(presented)
@@ -271,6 +289,12 @@ def require_adk_session(authorization: str | None) -> str:
     from kinguard.provenance.store import get_store
 
     email = str(claims.get("email") or "").strip().lower()
+    sub = str(claims.get("sub") or "").strip()
+    parts = [p for p in path.split("/") if p]
+    if len(parts) >= 4 and parts[0] == "apps" and parts[2] == "users":
+        target_user = parts[3].strip().lower()
+        if target_user not in {email, sub.lower()}:
+            raise HTTPException(status_code=403, detail=UNAUTHORISED_DETAIL)
     if email:
         for row in get_store().query_by_sk("PROFILE"):
             for contact in row.get("family_contacts") or []:
@@ -294,7 +318,7 @@ def require_case_access(request: Request,
     """
     if authorization and authorization.lower().startswith("bearer "):
         presented = authorization.split(" ", 1)[1].strip()
-        if hmac.compare_digest(presented, DEMO_TOKEN) or hmac.compare_digest(presented, LEGACY_DEMO_TOKEN):
+        if hmac.compare_digest(presented, DEMO_TOKEN):
             return presented
         session = _google_session(request, presented)
         if session is not None:

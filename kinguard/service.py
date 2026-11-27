@@ -554,7 +554,7 @@ def sla_status(sub: ClaimSubmission) -> dict[str, Any]:
 
 
 def publish_event(topic: str, payload: dict[str, Any]) -> str | None:
-    """Publish a case event. No-ops unless ANBU_PUBSUB_ENABLED is set, so local
+    """Publish a case event. No-ops unless KINGUARD_PUBSUB_ENABLED is set, so local
     runs and tests never need a live topic."""
     cfg = settings()
     if not cfg.pubsub_enabled:

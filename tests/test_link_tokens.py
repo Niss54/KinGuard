@@ -24,7 +24,7 @@ SECRET = "test-link-secret-not-real"
 
 @pytest.fixture(autouse=True)
 def secret(monkeypatch):
-    monkeypatch.setenv("ANBU_LINK_SECRET", SECRET)
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", SECRET)
 
 
 @pytest.fixture(scope="module")
@@ -120,7 +120,7 @@ def test_no_secret_means_no_links_rather_than_a_default(monkeypatch, two_familie
     """A hardcoded fallback would mean every deployment shared a signing key,
     so anyone who read the source could mint a link into any record."""
     (pid_a, case_a), _ = two_families
-    monkeypatch.delenv("ANBU_LINK_SECRET", raising=False)
+    monkeypatch.delenv("KINGUARD_LINK_SECRET", raising=False)
 
     assert make_link_token(pid_a, case_a) is None
     assert link_token_grants("anything", parent_id=pid_a, case_id=case_a) is False
@@ -130,7 +130,7 @@ def test_without_a_secret_the_alert_still_links_and_asks_for_a_sign_in(monkeypat
     """Degrades to the old behaviour, never to a broken link."""
     from kinguard.comms.policy import render_template
 
-    monkeypatch.delenv("ANBU_LINK_SECRET", raising=False)
+    monkeypatch.delenv("KINGUARD_LINK_SECRET", raising=False)
     body = render_template(
         "claim_stage", {"parent_name": "Amma", "stage": "approved", "amount": "30,000"},
         case_id="case-x", parent_id="parent-y",

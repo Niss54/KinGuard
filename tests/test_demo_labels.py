@@ -58,7 +58,7 @@ def carried(monkeypatch) -> list[str]:
 
 @pytest.fixture
 def tags_on(monkeypatch):
-    monkeypatch.setenv("ANBU_DEMO_ROLE_TAGS", "on")
+    monkeypatch.setenv("KINGUARD_DEMO_ROLE_TAGS", "on")
 
 
 def _alert(parent_id, to_e164):
@@ -87,10 +87,10 @@ def test_nothing_is_added_when_nobody_switched_it_on(family, carried):
 
 def test_only_affirmative_words_switch_it_on(monkeypatch):
     for value in ("off", "false", "0", "no", "", "maybe"):
-        monkeypatch.setenv("ANBU_DEMO_ROLE_TAGS", value)
+        monkeypatch.setenv("KINGUARD_DEMO_ROLE_TAGS", value)
         assert demo_labels.enabled() is False, value
     for value in ("on", "true", "1", "yes", "ON"):
-        monkeypatch.setenv("ANBU_DEMO_ROLE_TAGS", value)
+        monkeypatch.setenv("KINGUARD_DEMO_ROLE_TAGS", value)
         assert demo_labels.enabled() is True, value
 
 

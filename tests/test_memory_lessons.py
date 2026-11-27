@@ -3,7 +3,7 @@
 The hermetic tests here run everywhere and never touch the network: they prove
 the guards hold and that an unconfigured deployment degrades to silence rather
 than to an error. The cross-session test is the only one that needs a real
-Memory Bank, and it is skipped unless ANBU_MEMORY_BANK names one, so the suite
+Memory Bank, and it is skipped unless KINGUARD_MEMORY_BANK names one, so the suite
 stays runnable by anybody who clones this without a Google Cloud project.
 """
 
@@ -22,7 +22,7 @@ RESOURCE = "projects/p/locations/asia-south1/reasoningEngines/123"
 
 @pytest.fixture
 def unconfigured(monkeypatch):
-    monkeypatch.delenv("ANBU_MEMORY_BANK", raising=False)
+    monkeypatch.delenv("KINGUARD_MEMORY_BANK", raising=False)
     settings.cache_clear()
     lessons._default = None
     yield
@@ -32,7 +32,7 @@ def unconfigured(monkeypatch):
 
 @pytest.fixture
 def configured(monkeypatch):
-    monkeypatch.setenv("ANBU_MEMORY_BANK", RESOURCE)
+    monkeypatch.setenv("KINGUARD_MEMORY_BANK", RESOURCE)
     settings.cache_clear()
     lessons._default = None
     yield
@@ -53,7 +53,7 @@ def test_healthz_names_the_real_store_and_its_region(configured):
 
 
 def test_a_resource_name_that_is_not_one_is_called_misconfigured(monkeypatch):
-    monkeypatch.setenv("ANBU_MEMORY_BANK", "asia-south1")
+    monkeypatch.setenv("KINGUARD_MEMORY_BANK", "asia-south1")
     settings.cache_clear()
     lessons._default = None
     try:
@@ -113,8 +113,8 @@ def test_every_kind_has_a_writer_that_composes_its_own_sentence():
 
 @pytest.mark.memory_bank
 @pytest.mark.skipif(
-    not os.getenv("ANBU_MEMORY_BANK"),
-    reason="set ANBU_MEMORY_BANK_LIVE to a real Agent Engine resource to run this",
+    not os.getenv("KINGUARD_MEMORY_BANK"),
+    reason="set KINGUARD_MEMORY_BANK_LIVE to a real Agent Engine resource to run this",
 )
 def test_a_lesson_written_in_one_session_is_recalled_in_another():
     """Write through one client, read through a client that shares nothing.
@@ -125,7 +125,7 @@ def test_a_lesson_written_in_one_session_is_recalled_in_another():
     that "persistent" rests on, and it is why the test does not reuse
     `lessons.bank()` for both halves.
     """
-    resource = os.environ["ANBU_MEMORY_BANK"]
+    resource = os.environ["KINGUARD_MEMORY_BANK"]
     parent = f"par_test_{uuid.uuid4().hex[:12]}"
 
     writing_session = lessons._Bank(resource)
@@ -155,7 +155,7 @@ def test_a_lesson_written_in_one_session_is_recalled_in_another():
 def _answers(monkeypatch, reply):
     from kinguard.comms import detect_language
 
-    monkeypatch.setenv("ANBU_DETECT_LANGUAGE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DETECT_LANGUAGE_MODE", "gemini")
     monkeypatch.setattr(detect_language, "_ask", lambda sample: reply)
     return detect_language
 
@@ -192,7 +192,7 @@ def test_anything_off_the_list_teaches_us_nothing(monkeypatch, reply):
 def test_a_message_too_short_to_judge_is_not_sent_to_a_model(monkeypatch):
     from kinguard.comms import detect_language
 
-    monkeypatch.setenv("ANBU_DETECT_LANGUAGE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DETECT_LANGUAGE_MODE", "gemini")
     called = []
     monkeypatch.setattr(detect_language, "_ask",
                         lambda sample: called.append(sample) or "ta")
@@ -203,7 +203,7 @@ def test_a_message_too_short_to_judge_is_not_sent_to_a_model(monkeypatch):
 def test_switched_off_means_no_call_at_all(monkeypatch):
     from kinguard.comms import detect_language
 
-    monkeypatch.setenv("ANBU_DETECT_LANGUAGE_MODE", "off")
+    monkeypatch.setenv("KINGUARD_DETECT_LANGUAGE_MODE", "off")
     called = []
     monkeypatch.setattr(detect_language, "_ask",
                         lambda sample: called.append(sample) or "ta")
@@ -214,7 +214,7 @@ def test_switched_off_means_no_call_at_all(monkeypatch):
 def test_only_a_sample_is_sent_never_the_whole_message(monkeypatch):
     from kinguard.comms import detect_language
 
-    monkeypatch.setenv("ANBU_DETECT_LANGUAGE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DETECT_LANGUAGE_MODE", "gemini")
     seen = []
     monkeypatch.setattr(detect_language, "_ask",
                         lambda sample: seen.append(sample) or "en")
@@ -225,7 +225,7 @@ def test_only_a_sample_is_sent_never_the_whole_message(monkeypatch):
 def test_a_model_that_raises_is_not_an_error_for_the_caller(monkeypatch):
     from kinguard.comms import detect_language
 
-    monkeypatch.setenv("ANBU_DETECT_LANGUAGE_MODE", "gemini")
+    monkeypatch.setenv("KINGUARD_DETECT_LANGUAGE_MODE", "gemini")
     monkeypatch.setattr(detect_language, "_ask",
                         lambda sample: (_ for _ in ()).throw(RuntimeError("503")))
     assert detect_language.detect(SHE_WROTE) is None

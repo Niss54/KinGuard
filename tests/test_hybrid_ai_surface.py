@@ -23,9 +23,9 @@ def client() -> TestClient:
 
 def test_firebase_config_unconfigured_by_default(client: TestClient, monkeypatch) -> None:
     for var in (
-        "ANBU_FIREBASE_API_KEY",
-        "ANBU_FIREBASE_PROJECT_ID",
-        "ANBU_FIREBASE_APP_ID",
+        "KINGUARD_FIREBASE_API_KEY",
+        "KINGUARD_FIREBASE_PROJECT_ID",
+        "KINGUARD_FIREBASE_APP_ID",
     ):
         monkeypatch.delenv(var, raising=False)
 
@@ -40,13 +40,13 @@ def test_firebase_config_unconfigured_by_default(client: TestClient, monkeypatch
 def test_firebase_config_returns_public_fields_and_never_leaks_secrets(
     client: TestClient, monkeypatch
 ) -> None:
-    monkeypatch.setenv("ANBU_FIREBASE_API_KEY", "AIzaSyPublicTestKey")
-    monkeypatch.setenv("ANBU_FIREBASE_AUTH_DOMAIN", "kinguard-hack.firebaseapp.com")
-    monkeypatch.setenv("ANBU_FIREBASE_PROJECT_ID", "kinguard-hack")
-    monkeypatch.setenv("ANBU_FIREBASE_APP_ID", "1:12345:web:abcdef")
-    monkeypatch.setenv("ANBU_FIREBASE_RECAPTCHA_SITE_KEY", "6LeTestSiteKey")
-    monkeypatch.setenv("ANBU_FIREBASE_APPCHECK_DEBUG", "true")
-    monkeypatch.setenv("ANBU_LINK_SECRET", "super-secret-do-not-expose")
+    monkeypatch.setenv("KINGUARD_FIREBASE_API_KEY", "AIzaSyPublicTestKey")
+    monkeypatch.setenv("KINGUARD_FIREBASE_AUTH_DOMAIN", "kinguard-hack.firebaseapp.com")
+    monkeypatch.setenv("KINGUARD_FIREBASE_PROJECT_ID", "kinguard-hack")
+    monkeypatch.setenv("KINGUARD_FIREBASE_APP_ID", "1:12345:web:abcdef")
+    monkeypatch.setenv("KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY", "6LeTestSiteKey")
+    monkeypatch.setenv("KINGUARD_FIREBASE_APPCHECK_DEBUG", "true")
+    monkeypatch.setenv("KINGUARD_LINK_SECRET", "super-secret-do-not-expose")
 
     res = client.get("/api/firebase-config")
     assert res.status_code == 200
@@ -71,7 +71,7 @@ def test_dashboard_and_handoff_wire_firebase_ai_logic_once(client: TestClient) -
     onboarding_tools.record_emergency_disclosure_consent(pid)
     case = service.open_case(pid)
 
-    with patch.dict("os.environ", {"ANBU_LINK_SECRET": "test-link-secret-for-handoff"}):
+    with patch.dict("os.environ", {"KINGUARD_LINK_SECRET": "test-link-secret-for-handoff"}):
         ro_mint = client.post(
             f"/api/cases/{case.case_id}/handoff-link",
             headers={"Authorization": f"Bearer {DEMO_TOKEN}"},

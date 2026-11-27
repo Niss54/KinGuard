@@ -10,8 +10,8 @@
 | Organization | `kinguard.ai` (`227631295422`) |
 | Region | `asia-south1` (Mumbai) — same region as Firestore, so reads are local |
 | Firestore | Native mode, `(default)` database, `asia-south1` |
-| Composite index | `anbu` collection: `pk` ASC, `sk` ASC — **READY** |
-| Pub/Sub topics | `anbu-intake-events`, `anbu-case-updates`, `anbu-claim-status` |
+| Composite index | `kinguard` collection: `pk` ASC, `sk` ASC — **READY** |
+| Pub/Sub topics | `kinguard-intake-events`, `kinguard-case-updates`, `kinguard-claim-status` |
 | Model | `gemini-3.5-flash` via Vertex AI, location `global` |
 | Cloud Run service | `kinguard`, public via disabled invoker IAM check |
 | Scaling cap | `--max-instances=5`, containerConcurrency 80 → up to 400 in-flight requests |
@@ -19,7 +19,7 @@
 
 ## Historical prototype verification (August 2026)
 
-In the August 2026 prototype deployment (`anbu-care` on `kinguard-hack`):
+In the KinGuard August 2026 prototype deployment (`kinguard-hack`):
 `scripts/verify_stack.py` passes all five checks against the real project:
 ADK agents, Vertex AI + Gemini 3.5, Firestore read/write/range-query, Pub/Sub
 topics, and a stable signing key.
@@ -140,7 +140,7 @@ gcloud run services update kinguard --project=kinguard-hack \
 Both of these fail in ways that do not name the real cause — see the README's
 "First deploy on a fresh project" section.
 
-1. Firestore composite index (`pk` ASC, `sk` ASC on `anbu`). Without it, writes
+1. Firestore composite index (`pk` ASC, `sk` ASC on `kinguard`). Without it, writes
    succeed and chain reads fail at query time.
 2. Build roles on the default compute service account
    (`473806191488-compute@developer.gserviceaccount.com`):

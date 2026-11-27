@@ -4,7 +4,7 @@ The son in Nashville opens his phone and searches for a lab near his mother's
 hospital. This is that search, and it is a real one: Google Places, live, over
 the network, returning real Thoothukudi diagnostic centres with real place ids.
 
-`ANBU_DIAGNOSTICS_MODE` picks:
+`KINGUARD_DIAGNOSTICS_MODE` picks:
 
   places   a real Places API (New) text search near the hospital.
   seeded   no call. The hospitals already on file that offer diagnostics,
@@ -21,7 +21,7 @@ reserves a slot, and nothing downstream may say a lab was engaged — KinGuard
 is not integrated with any of these centres and cannot be. It is doing what the
 son does: looking up where the test can be done and sending the list.
 
-The key is deliberately its own variable. `ANBU_MAPS_API_KEY` is a browser key
+The key is deliberately its own variable. `KINGUARD_MAPS_API_KEY` is a browser key
 with referrer restrictions, and Places refuses it outright — "API keys with
 referer restrictions cannot be used with this API". Using one credential for
 both looked tidy and did not work.
@@ -92,11 +92,11 @@ class SearchResult:
 
 
 def mode() -> str:
-    return os.getenv("ANBU_DIAGNOSTICS_MODE", "seeded").strip().lower()
+    return os.getenv("KINGUARD_DIAGNOSTICS_MODE", "seeded").strip().lower()
 
 
 def configured() -> bool:
-    return bool(os.getenv("ANBU_PLACES_API_KEY"))
+    return bool(os.getenv("KINGUARD_PLACES_API_KEY"))
 
 
 def source() -> str:
@@ -167,7 +167,7 @@ def _search_places(*, test_label: str, lat: float, lon: float,
     request = urllib.request.Request(
         SEARCH_URL, data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json",
-                 "X-Goog-Api-Key": os.environ["ANBU_PLACES_API_KEY"],
+                 "X-Goog-Api-Key": os.environ["KINGUARD_PLACES_API_KEY"],
                  "X-Goog-FieldMask": FIELD_MASK})
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
