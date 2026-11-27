@@ -94,7 +94,7 @@ def test_both_the_family_and_the_care_circle_are_told(household, sent):
                   source_kind="voice", audio_object="voice/x.ogg"),
         household,
     )
-    assert sorted(out.alerted) == ["Nishant", "Meena"]
+    assert sorted(out.alerted) == ["Meena", "Nishant"]
     assert len(sent) == 2
 
 

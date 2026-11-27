@@ -1,8 +1,8 @@
-# Deployed environment
+# Deployment environment reference
 
-Current state of the live hackathon environment. Update this when it changes.
+> **Current status (not live):** The legacy Cloud Run endpoint `https://kinguard-37j4eofpwq-el.a.run.app` is **not** currently deployed (`404 Not Found`). The sections below preserve the Cloud Run / GCP setup notes and historical verification logs from our August 2026 prototype (`kinguard-hack`) as a deployment reference for `make deploy`.
 
-## Google Cloud
+## Google Cloud (reference configuration)
 
 | Item | Value |
 |---|---|
@@ -17,8 +17,9 @@ Current state of the live hackathon environment. Update this when it changes.
 | Scaling cap | `--max-instances=5`, containerConcurrency 80 → up to 400 in-flight requests |
 | Service URL | https://kinguard-37j4eofpwq-el.a.run.app |
 
-## Verified live
+## Historical prototype verification (August 2026)
 
+In the August 2026 prototype deployment (`anbu-care` on `kinguard-hack`):
 `scripts/verify_stack.py` passes all five checks against the real project:
 ADK agents, Vertex AI + Gemini 3.5, Firestore read/write/range-query, Pub/Sub
 topics, and a stable signing key.

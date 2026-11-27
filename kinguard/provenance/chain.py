@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
@@ -17,8 +18,22 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from kinguard.provenance.signing import Signer, load_signer, verify
+from kinguard.schemas import utcnow
 
 GENESIS_HASH = "0" * 64
+
+
+def trusted_signer_keys() -> set[str]:
+    """Return pinned public keys: current signer plus any configured rotated keys."""
+    keys = {load_signer().public_key_b64}
+    extra = (
+        os.getenv("KINGUARD_TRUSTED_PUBLIC_KEYS")
+        or os.getenv("ANBU_TRUSTED_PUBLIC_KEYS")
+        or ""
+    ).strip()
+    if extra:
+        keys.update(k.strip() for k in extra.split(",") if k.strip())
+    return keys
 
 
 def canonical_json(payload: Any) -> bytes:
@@ -59,7 +74,7 @@ class Receipt(BaseModel):
     hash: str
     signature: str
     public_key: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=utcnow)
 
     def signing_input(self) -> bytes:
         """The exact bytes covered by both the hash and the signature."""
@@ -92,7 +107,7 @@ def build_receipt(
     created_at: datetime | None = None,
 ) -> Receipt:
     signer = signer or load_signer()
-    created = created_at or datetime.now(UTC)
+    created = created_at or utcnow()
     receipt_id = f"{case_id}:{seq:06d}"
     draft = Receipt(
         receipt_id=receipt_id,
@@ -120,9 +135,17 @@ class VerificationResult(BaseModel):
     reason: str | None = None
 
 
-def verify_chain(receipts: Iterable[Receipt]) -> VerificationResult:
-    """Walk the chain and confirm nothing was altered or dropped."""
+def verify_chain(
+    receipts: Iterable[Receipt],
+    trusted_public_keys: Iterable[str] | None = None,
+) -> VerificationResult:
+    """Walk the chain and confirm nothing was altered, dropped, or swapped to an untrusted key."""
     ordered = sorted(receipts, key=lambda r: r.seq)
+    trusted = (
+        set(trusted_public_keys)
+        if trusted_public_keys is not None
+        else trusted_signer_keys()
+    )
     prev = GENESIS_HASH
     for index, receipt in enumerate(ordered):
         if receipt.seq != index:
@@ -140,6 +163,11 @@ def verify_chain(receipts: Iterable[Receipt]) -> VerificationResult:
             return VerificationResult(
                 ok=False, length=len(ordered), broken_at=receipt.seq,
                 reason="payload does not hash to the recorded hash: content was altered",
+            )
+        if receipt.public_key not in trusted:
+            return VerificationResult(
+                ok=False, length=len(ordered), broken_at=receipt.seq,
+                reason="receipt public_key is not a pinned trusted signer key",
             )
         if not verify(receipt.public_key, body, receipt.signature):
             return VerificationResult(
@@ -177,5 +205,5 @@ class ReceiptChain:
         self.receipts.append(receipt)
         return receipt
 
-    def verify(self) -> VerificationResult:
-        return verify_chain(self.receipts)
+    def verify(self, trusted_public_keys: Iterable[str] | None = None) -> VerificationResult:
+        return verify_chain(self.receipts, trusted_public_keys=trusted_public_keys)

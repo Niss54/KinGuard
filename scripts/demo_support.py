@@ -133,12 +133,15 @@ def ingest_doc(url: str, parent_id: str, image_path: str, session_id: str = "") 
 
     b64 = base64.b64encode(Path(image_path).read_bytes()).decode()
 
+    token = os.getenv("KINGUARD_DEMO_TOKEN") or os.getenv("ANBU_DEMO_TOKEN", "kinguard-demo-family-token")
+
     def post(path: str, payload: dict):
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
             json.dump(payload, fh)
             body = fh.name
         out = subprocess.run(
             ["curl", "-s", "--max-time", "300", "-X", "POST", f"{url}{path}",
+             "-H", f"Authorization: Bearer {token}",
              "-H", "content-type: application/json", "--data-binary", f"@{body}"],
             capture_output=True, text=True, check=False).stdout
         try:

@@ -166,12 +166,16 @@ def verify_google_identity(token: str) -> dict | None:
     return claims
 
 
-def _parent_for(request: Request) -> str | None:
-    """Which parent this request is asking about, from the path it is on."""
+def _parent_for(request: Request, case_id_override: str = "") -> str | None:
+    """Which parent this request is asking about, from the path or body."""
     parent_id = request.path_params.get("parent_id")
     if parent_id:
         return str(parent_id)
-    case_id = request.path_params.get("case_id") or request.query_params.get("case", "")
+    case_id = (
+        case_id_override
+        or request.path_params.get("case_id")
+        or request.query_params.get("case", "")
+    )
     if case_id:
         from kinguard import service
 
@@ -199,7 +203,9 @@ def _is_family_contact(parent_id: str, email: str) -> bool:
                for c in profile.family_contacts)
 
 
-def _google_session(request: Request, presented: str) -> str | None:
+def _google_session(
+    request: Request, presented: str, case_id_override: str = ""
+) -> str | None:
     """A verified Google account that is on this parent's contacts, or 401/403.
 
     Returns None when the token is not a Google one at all, so the caller can
@@ -210,12 +216,33 @@ def _google_session(request: Request, presented: str) -> str | None:
     if claims is None:
         return None
 
-    parent_id = _parent_for(request)
+    parent_id = _parent_for(request, case_id_override=case_id_override)
     if parent_id is None or not _is_family_contact(parent_id, claims["email"]):
         # 403, not 401: signing in again will not help, and saying "log in"
         # to someone already logged in sends them round a loop.
         raise HTTPException(status_code=403, detail=UNAUTHORISED_DETAIL)
     return f"google:{claims['sub']}"
+
+
+def verify_family_session(
+    request: Request,
+    authorization: str | None,
+    *,
+    case_id_override: str = "",
+) -> str:
+    """Verify a family session bearer token (shared helper for endpoints and Depends)."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail=UNAUTHENTICATED_DETAIL)
+
+    presented = authorization.split(" ", 1)[1].strip()
+    if hmac.compare_digest(presented, DEMO_TOKEN) or hmac.compare_digest(presented, LEGACY_DEMO_TOKEN):
+        return presented
+
+    session = _google_session(request, presented, case_id_override=case_id_override)
+    if session is not None:
+        return session
+
+    raise HTTPException(status_code=401, detail=UNAUTHENTICATED_DETAIL)
 
 
 def require_family_session(request: Request,
@@ -225,6 +252,11 @@ def require_family_session(request: Request,
     Constant-time compare — the token is not a secret here, but a credential
     check that leaks timing is a bad pattern to ship even in a demo.
     """
+    return verify_family_session(request, authorization)
+
+
+def require_adk_session(authorization: str | None) -> str:
+    """Authorize ADK session, artifact, memory, and agent-run routes."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail=UNAUTHENTICATED_DETAIL)
 
@@ -232,11 +264,19 @@ def require_family_session(request: Request,
     if hmac.compare_digest(presented, DEMO_TOKEN) or hmac.compare_digest(presented, LEGACY_DEMO_TOKEN):
         return presented
 
-    session = _google_session(request, presented)
-    if session is not None:
-        return session
+    claims = verify_google_identity(presented)
+    if claims is None:
+        raise HTTPException(status_code=401, detail=UNAUTHENTICATED_DETAIL)
 
-    raise HTTPException(status_code=401, detail=UNAUTHENTICATED_DETAIL)
+    from kinguard.provenance.store import get_store
+
+    email = str(claims.get("email") or "").strip().lower()
+    if email:
+        for row in get_store().query_by_sk("PROFILE"):
+            for contact in row.get("family_contacts") or []:
+                if (contact.get("email") or "").strip().lower() == email:
+                    return f"google:{claims['sub']}"
+    raise HTTPException(status_code=403, detail=UNAUTHORISED_DETAIL)
 
 
 def require_case_access(request: Request,

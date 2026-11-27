@@ -31,7 +31,7 @@ from fastapi import (
     Response,
     UploadFile,
 )
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from google.adk.cli.fast_api import get_fast_api_app
 from pydantic import BaseModel
 
@@ -55,7 +55,12 @@ from kinguard.tools import (
     triage_tools,
     whatsapp_tools,
 )
-from kinguard.webauth import require_case_access, require_family_session
+from kinguard.webauth import (
+    require_adk_session,
+    require_case_access,
+    require_family_session,
+    verify_family_session,
+)
 from kinguard.wellbeing import handler as wellbeing_escalation
 from kinguard.wellbeing import store as wellbeing_store
 
@@ -125,6 +130,23 @@ async def _lifespan(scoped_app):
 
 
 app.router.lifespan_context = _lifespan
+
+_PROTECTED_ADK_PREFIXES = ("/apps/", "/dev/", "/agent-identity/")
+_PROTECTED_ADK_EXACT = {"/run", "/run_sse", "/run_live", "/list-apps"}
+
+
+@app.middleware("http")
+async def _protect_adk_routes(request: Request, call_next):
+    path = request.url.path
+    if request.method != "OPTIONS" and (
+        path in _PROTECTED_ADK_EXACT
+        or any(path.startswith(prefix) for prefix in _PROTECTED_ADK_PREFIXES)
+    ):
+        try:
+            require_adk_session(request.headers.get("authorization"))
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return await call_next(request)
 
 
 def _demo_family_timezone() -> str:
@@ -348,13 +370,20 @@ def hospitals() -> dict[str, Any]:
 
 
 @app.post("/api/intake")
-def intake(request: IntakeRequest) -> dict[str, Any]:
+def intake(
+    request: IntakeRequest,
+    raw_request: Request,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
     """Direct triage, bypassing the agent loop.
 
     This is how an automated intake signal — a hospital feed, a wearable alert,
     a neighbour tapping a button — enters the system, and it is the path the
     demo uses when it needs the routing decision to be reproducible.
     """
+    if request.case_id:
+        verify_family_session(raw_request, authorization, case_id_override=request.case_id)
+
     result = triage_tools.run_triage(
         parent_id=request.parent_id,
         symptoms=request.symptoms,
@@ -365,7 +394,10 @@ def intake(request: IntakeRequest) -> dict[str, Any]:
         case_id=request.case_id,
     )
     if result.get("status") == "error":
-        raise HTTPException(status_code=404, detail=result["error"])
+        raise HTTPException(
+            status_code=int(result.get("status_code", 404)),
+            detail=result["error"],
+        )
     norm_src = (request.client_normalizer_source or "").strip().lower()
     if norm_src in {"on_device", "in_cloud"} and result.get("case_id"):
         service.append_receipt(
@@ -2995,14 +3027,24 @@ def _order_form_html(token: str) -> str:
         f"fbReason=lmAvail==='available'?'On-device Gemini Nano ready (Firebase fallback unconfigured)':'Firebase AI config not set';"
         f"srcTag.textContent=lmAvail==='available'?'On-device Nano available':'Hybrid unconfigured';"
         f"return;}}"
-        f"const [{{initializeApp}},{{initializeAppCheck,ReCaptchaEnterpriseProvider}},{{getAI,getGenerativeModel,GoogleAIBackend,InferenceMode}}]=await Promise.all(["
+        f"const [{{initializeApp}},{{initializeAppCheck,ReCaptchaEnterpriseProvider,CustomProvider}},{{getAI,getGenerativeModel,GoogleAIBackend,InferenceMode}}]=await Promise.all(["
         f"import(`${{FB_CDN}}/firebase-app.js`),"
         f"import(`${{FB_CDN}}/firebase-app-check.js`),"
         f"import(`${{FB_CDN}}/firebase-ai.js`)]);"
         f"const app=initializeApp(cfg.firebase_config);"
-        f"if(cfg.app_check_debug)self.FIREBASE_APPCHECK_DEBUG_TOKEN=true;"
+        f"let appCheckOk=false;"
+        f"if(cfg.app_check_debug){{self.FIREBASE_APPCHECK_DEBUG_TOKEN=true;}}"
         f"if(cfg.recaptcha_site_key){{"
-        f"initializeAppCheck(app,{{provider:new ReCaptchaEnterpriseProvider(cfg.recaptcha_site_key),isTokenAutoRefreshEnabled:true}});}}"
+        f"initializeAppCheck(app,{{provider:new ReCaptchaEnterpriseProvider(cfg.recaptcha_site_key),isTokenAutoRefreshEnabled:true}});"
+        f"appCheckOk=true;"
+        f"}}else if(cfg.app_check_debug){{"
+        f"initializeAppCheck(app,{{provider:new CustomProvider({{getToken:()=>Promise.reject(new Error('App Check debug mode active'))}}),isTokenAutoRefreshEnabled:true}});"
+        f"appCheckOk=true;"
+        f"}}"
+        f"if(lmAvail!=='available'&&!appCheckOk){{"
+        f"fbReason='App Check unconfigured (set KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY or KINGUARD_FIREBASE_APPCHECK_DEBUG=true); cloud fallback unavailable.';"
+        f"srcTag.textContent='App Check Config Needed';"
+        f"return;}}"
         f"const ai=getAI(app,{{backend:new GoogleAIBackend()}});"
         f"hybridModel=getGenerativeModel(ai,{{mode:InferenceMode.PREFER_ON_DEVICE,inCloudParams:{{model:cfg.cloud_fallback_model||'gemini-2.5-flash'}}}});"
         f"fbReady=true;"

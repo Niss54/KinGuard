@@ -25,6 +25,7 @@ jobs:
         # no model access, no network.
         env:
           ANBU_STORE_BACKEND: memory
+          PYTHONUTF8: "1"
         run: uv run pytest -q
 
       - name: End-to-end spine

@@ -49,6 +49,20 @@ def run_triage(
 
     if not case_id:
         case_id = service.open_case(parent_id).case_id
+    else:
+        existing_case = service.load_case(case_id)
+        if existing_case is None:
+            return {
+                "status": "error",
+                "status_code": 404,
+                "error": f"no case for case_id {case_id}",
+            }
+        if existing_case.parent_id != parent_id:
+            return {
+                "status": "error",
+                "status_code": 403,
+                "error": f"case {case_id} does not belong to parent {parent_id}",
+            }
 
     report = SymptomReport(
         parent_id=parent_id,

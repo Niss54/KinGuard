@@ -227,15 +227,23 @@ def load_receipts(
     return [Receipt.model_validate(_strip_keys(r)) for r in rows]
 
 
+class ReceiptConflictError(RuntimeError):
+    """Raised when attempting to overwrite an already-persisted receipt sequence slot."""
+
+
 def save_receipt(
     receipt: Receipt, store: Store | None = None, subject: str = CASE_SUBJECT
 ) -> None:
     store = store or get_store()
-    store.put(
+    won = store.put_if_absent(
         f"{subject}{receipt.case_id}",
         receipt_sk(receipt.seq),
         receipt.model_dump(mode="json"),
     )
+    if not won:
+        raise ReceiptConflictError(
+            f"receipt slot {subject}{receipt.case_id}/{receipt_sk(receipt.seq)} already exists"
+        )
 
 
 def _strip_keys(row: dict[str, Any]) -> dict[str, Any]:

@@ -7,6 +7,7 @@ shape, and lets every tool be tested with no model in the loop.
 
 from __future__ import annotations
 
+import threading
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -15,6 +16,7 @@ from kinguard.config import settings
 from kinguard.provenance.chain import Receipt, ReceiptChain, VerificationResult
 from kinguard.provenance.store import (
     CASE_SUBJECT,
+    ReceiptConflictError,
     Store,
     get_store,
     load_receipts,
@@ -35,6 +37,7 @@ from kinguard.schemas import (
     PaymentMandate,
     PaymentRecord,
     PreAuthRequest,
+    utcnow,
 )
 
 # IRDAI 2024 Master Circular: cashless pre-auth decision within 1 hour;
@@ -48,7 +51,7 @@ def new_id(prefix: str) -> str:
 
 
 def _now() -> datetime:
-    return datetime.now(UTC)
+    return utcnow()
 
 
 # --------------------------------------------------------------------------
@@ -357,6 +360,20 @@ def lookup_whatsapp_number(number: str) -> dict[str, Any] | None:
     return get_store().get(f"WANUMBER#{key}", "OWNER")
 
 
+_CHAIN_LOCKS_GUARD = threading.Lock()
+_CHAIN_LOCKS: dict[tuple[int, str, str], threading.Lock] = {}
+
+
+def _chain_lock(store: Store, subject: str, case_id: str) -> threading.Lock:
+    key = (id(store), subject, case_id)
+    with _CHAIN_LOCKS_GUARD:
+        lock = _CHAIN_LOCKS.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _CHAIN_LOCKS[key] = lock
+        return lock
+
+
 def append_receipt(
     case_id: str,
     *,
@@ -366,16 +383,26 @@ def append_receipt(
     store: Store | None = None,
     subject: str = CASE_SUBJECT,
 ) -> Receipt:
-    """Append one link to a case's chain and persist it.
+    """Append one link to a case's chain and persist it atomically.
 
-    Reads the existing chain first so seq and prev_hash come from what is
-    actually stored, not from an in-process guess.
+    Serializes in-process writers with a per-chain lock and uses atomic
+    compare-and-set (`put_if_absent`) with reload-and-retry on conflict so
+    concurrent writers across threads or processes never overwrite a receipt.
     """
     store = store or get_store()
-    chain = ReceiptChain(case_id, load_receipts(case_id, store, subject))
-    receipt = chain.append(kind=kind, actor=actor, payload=payload)
-    save_receipt(receipt, store, subject)
-    return receipt
+    lock = _chain_lock(store, subject, case_id)
+    with lock:
+        for _attempt in range(64):
+            chain = ReceiptChain(case_id, load_receipts(case_id, store, subject))
+            receipt = chain.append(kind=kind, actor=actor, payload=payload)
+            try:
+                save_receipt(receipt, store, subject)
+                return receipt
+            except ReceiptConflictError:
+                continue
+        raise RuntimeError(
+            f"failed to append receipt to {subject}{case_id} after 64 concurrency retries"
+        )
 
 
 def get_chain(

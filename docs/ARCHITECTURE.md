@@ -5,9 +5,10 @@ Design decisions, and why each was made.
 ## The shape
 
 An optional client-side **Firebase AI Logic Hybrid Client Tier** (`firebase/ai` v13.4.0,
-`PREFER_ON_DEVICE` Gemini Nano with Firebase-managed Gemini Cloud fallback, gated by
-App Check) assists in the browser for non-clinical tasks only: pre-filling noisy
-Tanglish/Hinglish/voice intake text (`POST /api/intake`), plain-language explanations of
+`PREFER_ON_DEVICE` Gemini Nano on supported desktop Chrome for English, with App-Check-gated
+Gemini Cloud fallback for Tamil/Tanglish/Hindi and mobile/non-Nano browsers) assists in the
+browser for non-clinical tasks only: client-side deterministic PII masking (`maskPII`) followed
+by advisory intake normalisation (`POST /api/intake`), plain-language explanations of
 settled brief/record/claim cards, and diagnostic handoff note pre-fill. Above/behind
 it on the server sits a coordinator (`kinguard/agent.py`) holding five ADK sub-agents,
 each with its own tool module and no access to any other agent's tools. Underneath them
@@ -144,13 +145,13 @@ CASE#<cid>         RECEIPT#000000      Receipt
 CASE#<cid>         RECEIPT#000001      Receipt
 ```
 
-`append_receipt` reads the stored chain before appending, so `seq` and
-`prev_hash` come from what is actually persisted rather than an in-process
-counter. Two workers appending concurrently would collide on `seq` — acceptable
-at hackathon scale, and the fix (a Firestore transaction on the case document)
-is a known next step rather than an oversight.
+`append_receipt` serializes per-chain writes in-process and uses atomic compare-and-set
+(`store.put_if_absent` — Firestore `.create()`) with reload-and-retry so concurrent appends
+cannot silently overwrite an earlier sequence slot. `verify_chain` also pins the trusted
+signer public key (`load_signer().public_key_b64` plus optional rotated keys) rather than
+trusting a self-supplied public key inside a tampered receipt.
 
-A `MemoryStore` implements the same interface, which is why 1258 tests run with no
+A `MemoryStore` implements the same interface, which is why 1,272 tests run with no
 GCP access at all.
 
 ## Why the TPA is simulated, and says so
@@ -217,8 +218,6 @@ gets confused produces a worse *explanation*, not a worse *decision*.
 
 ## Known gaps
 
-- **Concurrent receipt appends** can collide on `seq`. Needs a Firestore
-  transaction on the case document.
 - **Memory Bank recall is load-bearing for language and not for reply mode.**
   `language` is observed on her own inbound messages, stored, and read back to
   decide what the next admission's first check-in is written in. `reply_mode` is

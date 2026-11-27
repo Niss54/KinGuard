@@ -423,13 +423,14 @@ const S = { caseId:null, parentId:null, token:null, trail:null, brief:null,
             hospitals:null,
             intakeOpen:false,
             hybrid:{
-              ready:false, configured:false, nanoStatus:"checking", reason:"Initialising…",
+              ready:false, configured:false, appCheckActive:false, nanoStatus:"checking", reason:"Initialising…",
               lastSource:null, model:null, cloudModel:"gemini-2.5-flash",
               intakeText:"", intakeBusy:false, intakeNorm:null, intakeErr:null, intakeSubmitted:null,
               explainBusy:false, explainOut:null, explainErr:null, explainScope:null,
               explainLang:"en", explainSource:null,
               uploadBusy:false, uploadMsg:null, uploadOk:false, uploadPrecheck:null,
             },
+            _loadedCaseId:null,
             notified:null, view:"now" };
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -2290,7 +2291,29 @@ async function seed(){
       raw_text:"71F brought in by a neighbour. Chest tightness ~20 min, radiating to left arm, sweating. She says it's probably just gas."})})).json();
   S.parentId=s.parent_id; S.caseId=sig.signal.case_id; await load();
 }
-function useCase(){ const v=document.getElementById("cid").value.trim(); if(v){S.caseId=v; load();} }
+function resetCaseScopedState(clearParent = true){
+  if(clearParent) S.parentId = null;
+  S.trail = null; S.brief = null; S.record = null; S.verify = null;
+  S.wellbeing = null; S.careCircle = null; S.recovery = null;
+  S.bills = null; S.pay = null; S.dx = null; S.appointments = null;
+  S.handoff = null; S.notified = null; S.payNote = null; S.payNoteOk = false;
+  S.hybrid.explainBusy = false;
+  S.hybrid.explainOut = null;
+  S.hybrid.explainErr = null;
+  S.hybrid.explainScope = null;
+  S.hybrid.explainSource = null;
+  S.hybrid.uploadBusy = false;
+  S.hybrid.uploadMsg = null;
+  S.hybrid.uploadOk = false;
+}
+function useCase(){
+  const v=document.getElementById("cid").value.trim();
+  if(v){
+    if(v !== S.caseId) resetCaseScopedState(true);
+    S.caseId=v;
+    load();
+  }
+}
 // Enter submits. Leaving it inert makes the field feel broken.
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter" && e.target && e.target.id==="cid"){ e.preventDefault(); useCase(); }
@@ -2379,6 +2402,10 @@ function tokenFromLink(){
 }
 
 async function load(){
+  if(S.caseId !== S._loadedCaseId){
+    resetCaseScopedState(false);
+    S._loadedCaseId = S.caseId;
+  }
   if(!S.hospitals) S.hospitals = (await api("/api/hospitals"))?.hospitals || [];
   // Whichever credential is held, the header should say who it belongs to.
   // /api/whoami never 401s, so this is safe to ask on every load.
@@ -2471,7 +2498,7 @@ async function initHybridAI(){
     }
     const [
       { initializeApp },
-      { initializeAppCheck, ReCaptchaEnterpriseProvider },
+      { initializeAppCheck, ReCaptchaEnterpriseProvider, CustomProvider },
       { getAI, getGenerativeModel, GoogleAIBackend, InferenceMode },
     ] = await Promise.all([
       import(`${FB_CDN}/firebase-app.js`),
@@ -2480,12 +2507,30 @@ async function initHybridAI(){
     ]);
 
     const app = initializeApp(cfg.firebase_config);
+    let appCheckOk = false;
     if(cfg.app_check_debug) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
     if(cfg.recaptcha_site_key){
       initializeAppCheck(app, {
         provider: new ReCaptchaEnterpriseProvider(cfg.recaptcha_site_key),
         isTokenAutoRefreshEnabled: true,
       });
+      appCheckOk = true;
+    }else if(cfg.app_check_debug){
+      initializeAppCheck(app, {
+        provider: new CustomProvider({
+          getToken: () => Promise.reject(new Error("App Check debug mode active")),
+        }),
+        isTokenAutoRefreshEnabled: true,
+      });
+      appCheckOk = true;
+    }
+    h.appCheckActive = appCheckOk;
+    if(h.nanoStatus !== "available" && !appCheckOk){
+      h.ready = false;
+      h.model = null;
+      h.reason = "App Check unconfigured (set KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY or KINGUARD_FIREBASE_APPCHECK_DEBUG=true); cloud fallback unavailable.";
+      render();
+      return;
     }
     const ai = getAI(app, { backend: new GoogleAIBackend() });
     h.model = getGenerativeModel(ai, {
@@ -2494,8 +2539,10 @@ async function initHybridAI(){
     });
     h.ready = true;
     h.reason = h.nanoStatus === "available"
-      ? `Firebase AI Logic ready: On-device Gemini Nano preferred, fallback ${h.cloudModel}`
-      : `Firebase AI Logic ready: Cloud fallback (${h.cloudModel}) active (Chrome Nano ${h.nanoStatus})`;
+      ? (appCheckOk
+          ? `Firebase AI Logic ready: On-device Gemini Nano preferred (desktop Chrome English), fallback ${h.cloudModel}`
+          : `On-device Gemini Nano ready in Chrome; App Check unconfigured so cloud fallback is inactive`)
+      : `Firebase AI Logic ready: Cloud fallback (${h.cloudModel}) active via App Check (Chrome Nano ${h.nanoStatus})`;
   }catch(e){
     h.ready = false;
     h.reason = `Firebase AI Logic init failed: ${String(e)}`;
@@ -2520,7 +2567,31 @@ function hybridStatusBadge(compact){
     return `<span class="hyb-badge nano" title="${esc(h.reason)}">⚡ Nano Ready</span>`;
   if(h.ready)
     return `<span class="hyb-badge cloud" title="${esc(h.reason)}">☁️ ${compact?"Hybrid Fallback Ready":`Hybrid Ready (${esc(h.cloudModel)})`}</span>`;
+  if(h.configured && !h.appCheckActive)
+    return `<span class="hyb-badge warn" title="${esc(h.reason)}">${compact?"App Check Needed":"Firebase App Check Needed"}</span>`;
   return `<span class="hyb-badge warn" title="${esc(h.reason)}">${compact?"Hybrid Config Needed":"Firebase AI Config Needed"}</span>`;
+}
+
+function maskPII(raw){
+  return String(raw || "")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[REDACTED_EMAIL]")
+    .replace(/\b\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, "[REDACTED_ID]")
+    .replace(/\b(?:phone|ph|mob|mobile|tel|call)\s*[:#-]?\s*(?:\+?\d[\d\s-]{6,14}\d)/gi, "[REDACTED_PHONE]")
+    .replace(/(?:\+\d{1,3}[\s-]?)?\b[6-9]\d{9}\b/g, "[REDACTED_PHONE]")
+    .replace(/\b(?:pin(?:code)?|postal)\s*[:#-]?\s*\d{6}\b/gi, "[REDACTED_PIN]")
+    .replace(/\b(?:house|door|flat|apt|plot)\s*(?:no\.?|#)?\s*[A-Z0-9\/-]+(?:\s*,\s*[^,\n.]{2,40}){0,2}/gi, "[REDACTED_ADDRESS]");
+}
+
+function onIntakeTextInput(val){
+  const h = S.hybrid;
+  h.intakeText = val;
+  h.intakeErr = null;
+  h.intakeSubmitted = null;
+  if(h.intakeNorm && h.intakeNorm.sourceText !== val.trim()){
+    h.intakeNorm = null;
+    const out = document.getElementById("hyb-norm-out");
+    if(out) out.remove();
+  }
 }
 
 function setIntakePreset(text){
@@ -2533,9 +2604,9 @@ function setIntakePreset(text){
 
 function vHybridIntakeBody(){
   const h = S.hybrid;
-  const n = h.intakeNorm;
+  const n = (h.intakeNorm && h.intakeNorm.sourceText === (h.intakeText || "").trim()) ? h.intakeNorm : null;
   return `
-    <textarea id="hyb-intake-ta" class="hyb-ta" oninput="S.hybrid.intakeText=this.value"
+    <textarea id="hyb-intake-ta" class="hyb-ta" oninput="onIntakeTextInput(this.value)"
       placeholder="Describe what happened in English, Tamil, Tanglish, or Hindi (e.g. 'amma fell, maarbu vali, sweating, says it is probably gas')">${esc(h.intakeText)}</textarea>
     <div class="hyb-chips">
       <button type="button" class="hyb-chipbtn" onclick="setIntakePreset('அம்மாவுக்கு நெஞ்சு வலி, amma chest heavy, sweating ~20 min, she says it is probably just gas. Phone 9876543210.')">
@@ -2553,19 +2624,19 @@ function vHybridIntakeBody(){
         2. Run deterministic triage &amp; open case</button>
     </div>
     ${h.intakeErr?`<div class="strip note" style="margin-top:10px;background:var(--red-bg);color:var(--red-ink)">${esc(h.intakeErr)}</div>`:""}
-    ${n?`<div class="hyb-out">
+    ${n?`<div id="hyb-norm-out" class="hyb-out">
       <div class="hyb-bar" style="margin-bottom:8px">
         <span style="font-weight:800;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em">Advisory normalisation result</span>
         ${sourceBadge(n.source)}
       </div>
       <div class="row"><div class="k">Extracted symptoms</div>
         <div class="v">${(n.symptoms||[]).length?n.symptoms.map(x=>`<span class="chip">${esc(x)}</span>`).join(" "):"none extracted"}</div></div>
-      ${n.pii_masked_preview?`<div class="row stack"><div class="k">Local PII-masked preview</div>
+      ${n.pii_masked_preview?`<div class="row stack"><div class="k">Client PII-masked text (sent to model &amp; triage)</div>
         <div class="v">${esc(n.pii_masked_preview)}</div></div>`:""}
       ${n.advisory_note?`<div class="row stack"><div class="k">Advisory note</div>
         <div class="v">${esc(n.advisory_note)}</div></div>`:""}
       <p class="mute" style="margin-top:8px;font-size:12px">
-        Advisory only; never sets severity. Both extracted terms and your raw words are checked by the server's deterministic escalation rules.
+        Advisory only; never sets severity. Client-side PII redaction runs in your browser before the model or triage endpoint receives text.
       </p>
     </div>`:""}
     ${h.intakeSubmitted?`<div class="strip note" style="margin-top:10px;background:var(--teal-bg);color:var(--teal-ink)">
@@ -2579,7 +2650,9 @@ async function runHybridNormalize(){
   h.intakeText = text;
   h.intakeErr = null;
   h.intakeSubmitted = null;
+  h.intakeNorm = null;
   if(!text){ h.intakeErr = "Enter symptoms or a message first."; render(); return; }
+  const maskedText = maskPII(text);
   if(!h.ready || !h.model){
     h.intakeErr = h.reason + " You can still tap step 2 directly to run deterministic triage.";
     render();
@@ -2589,13 +2662,13 @@ async function runHybridNormalize(){
   try{
     const prompt = [
       "You are an advisory multilingual intake normaliser for elderly care in India.",
-      "Input may be English, Tamil, Tanglish, or Hindi.",
+      "Input may be English, Tamil, Tanglish, or Hindi. Direct PII has already been redacted locally.",
       "1) Extract short English symptom phrases (e.g. chest pain, chest heaviness, shortness of breath, dizziness, fall, sweating, fever, cough). Max 6.",
-      "2) Produce pii_masked_preview by replacing any phone number, email, Aadhaar, or full street address with [REDACTED].",
+      "2) Preserve any [REDACTED_*] markers and redact any remaining personal identifier in pii_masked_preview.",
       "3) Provide a 1-sentence factual advisory_note without diagnosing or giving medical advice.",
       "Return ONLY raw JSON with keys: symptoms (string[]), pii_masked_preview (string), advisory_note (string).",
       "",
-      "Message: " + text,
+      "Message: " + maskedText,
     ].join("\n");
     const res = await h.model.generateContent(prompt);
     const src = res.response.inferenceSource || "in_cloud";
@@ -2604,9 +2677,11 @@ async function runHybridNormalize(){
     const jm = raw.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jm ? jm[0] : raw);
     h.intakeNorm = {
+      sourceText: text,
+      maskedText,
       source: src,
       symptoms: Array.isArray(parsed.symptoms) ? parsed.symptoms.map(s=>String(s).trim()).filter(Boolean).slice(0,6) : [],
-      pii_masked_preview: String(parsed.pii_masked_preview || ""),
+      pii_masked_preview: maskPII(String(parsed.pii_masked_preview || maskedText)),
       advisory_note: String(parsed.advisory_note || ""),
     };
   }catch(e){
@@ -2628,23 +2703,26 @@ async function submitHybridIntake(){
     render();
     return;
   }
+  const maskedFreeText = maskPII(text);
+  const normValid = !!(h.intakeNorm && h.intakeNorm.sourceText === text);
+  if(!normValid) h.intakeNorm = null;
   h.intakeBusy = true; render();
   try{
     if(!S.parentId){
       const seeded = await fetch(`${API}/api/demo/seed`, {method:"POST"}).then(r=>r.json());
       S.parentId = seeded.parent_id;
     }
-    const symptoms = (h.intakeNorm?.symptoms && h.intakeNorm.symptoms.length) ? h.intakeNorm.symptoms : [];
+    const symptoms = (normValid && h.intakeNorm.symptoms && h.intakeNorm.symptoms.length) ? h.intakeNorm.symptoms : [];
     const r = await fetch(`${API}/api/intake`, {
       method:"POST",
       headers:{"content-type":"application/json"},
       body: JSON.stringify({
         parent_id: S.parentId,
         symptoms,
-        free_text: text,
+        free_text: maskedFreeText,
         reported_by: "family_web_intake",
-        client_normalizer_source: h.intakeNorm?.source || "",
-        client_normalizer_note: h.intakeNorm?.advisory_note || "",
+        client_normalizer_source: normValid ? (h.intakeNorm.source || "") : "",
+        client_normalizer_note: normValid ? (h.intakeNorm.advisory_note || "") : "",
       }),
     });
     const out = await r.json();
@@ -2668,7 +2746,7 @@ function vHybridExplainCard(scope){
   return `<div class="card">
     <div class="hyb-bar">
       <div><h2 class="mini" style="margin:0">Plain-language companion (Hybrid AI)</h2>
-        <p class="mute" style="margin:2px 0 0;font-size:12.5px">Explains only what is already on this screen locally on-device (never invents advice).</p></div>
+        <p class="mute" style="margin:2px 0 0;font-size:12.5px">Explains only what is already on this screen (desktop Chrome Gemini Nano when available, or Firebase cloud fallback; never invents advice).</p></div>
       ${active?sourceBadge(h.explainSource):hybridStatusBadge(true)}
     </div>
     <div class="btns" style="margin-top:6px">
@@ -2704,8 +2782,14 @@ async function runHybridExplain(scope, lang){
   let snapshot = null;
   if(scope === "brief") snapshot = S.brief?.brief;
   else if(scope === "record") snapshot = {
-    profile: S.record?.profile,
-    documents: (S.record?.documents || []).map(d=>({ kind:d.kind, summary:d.summary, delta:d.delta_vs_baseline, observations:d.observations })),
+    profile: S.record?.profile ? {
+      age: S.record.profile.age,
+      city: S.record.profile.city,
+      chronic_conditions: S.record.profile.chronic_conditions,
+      allergies: S.record.profile.allergies,
+      medications: S.record.profile.medications,
+    } : null,
+    documents: (S.record?.documents || []).map(d=>({ kind:d.kind, summary:maskPII(d.summary), delta:d.delta_vs_baseline, observations:d.observations })),
   };
   else if(scope === "claim") snapshot = {
     bills: (S.bills?.bills || []).map(b=>({ vendor:b.vendor, stated_total_inr:b.stated_total_inr, balance_due_inr:b.balance_due_inr })),

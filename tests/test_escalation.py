@@ -435,7 +435,7 @@ def test_a_separate_care_circle_contact_still_gets_their_notice(monkeypatch):
     entry = wb.record(pid, "self-reported", "crushing chest pain, can't breathe")
     out = handler.handle(entry, pid)
 
-    assert sorted(out.alerted) == ["Nishant", "Meena"]
+    assert sorted(out.alerted) == ["Meena", "Nishant"]
     assert sorted(sent) == ["+16692167706", "+919000000101"]
 
 

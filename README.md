@@ -8,57 +8,49 @@ Built for the **[Firebase Hybrid AI Hackathon](https://firebasehybridaihackathon
 
 ### Firebase Hybrid AI Architecture
 
-KinGuard preserves a strict architectural boundary — *"Guardrails that matter are code, not prompts"* — while solving the latency, privacy, and infra-cost problems documented in our earlier build (such as the deferred advisory intake normaliser in "Future work"):
+KinGuard preserves a strict architectural boundary — *"Guardrails that matter are code, not prompts"* — while adding client-side hybrid inference and deterministic PII redaction on top of our existing coordination core (see [`DISCLOSURE.md`](DISCLOSURE.md)):
 
-1. **On-Device Advisory Intake & PII-Masked Normaliser (`/app`):** Using **Firebase AI Logic (`firebase/ai`, `InferenceMode.PREFER_ON_DEVICE`)**, messy Tamil, Tanglish, Hindi, or English symptom reports are normalised into structured clinical phrases and masked for local PII inside the browser via **Gemini Nano** before deterministic `RED_FLAGS` triage runs on Cloud Run (seamlessly falling back to Cloud Gemini via Firebase App Check if Chrome Nano is unavailable).
-2. **Local Plain-Language & Multilingual Record Companion (`/app`):** Families can translate/summarise their parent's already-loaded Arrival Brief, Lab Deltas, or Bill Split into plain English, Tamil, or Hindi locally on-device with zero extra server exposure of sensitive figures.
-3. **Bedside Clinician Local Order Extraction (`/handoff/{token}`):** Clinicians can type a quick bedside note and extract structured test orders (`orders_test`, `mobility`) locally on their phone/browser before explicit human confirmation onto the provenance chain.
+1. **Client-Side Advisory Intake & Deterministic PII Masking (`/app`):** Before any model or triage request leaves the browser, deterministic client-side redaction (`maskPII`) masks direct identifiers (phone numbers, emails, Aadhaar-like IDs, postal codes/addresses). **Firebase AI Logic (`firebase/ai`, `InferenceMode.PREFER_ON_DEVICE`)** then normalises masked symptom reports — using on-device **Gemini Nano** on supported desktop Chrome for English, and automatically falling back via **Firebase App Check** to Cloud Gemini (`gemini-2.5-flash`) for Tamil/Tanglish/Hindi or browsers without Nano — before deterministic `RED_FLAGS` triage runs on the backend.
+2. **Plain-Language & Multilingual Record Companion (`/app`):** Families can summarise their parent's already-loaded Arrival Brief, Lab Deltas, or Bill Split in plain English, Tamil, or Hindi. On-device execution via Gemini Nano applies only on supported desktop Chrome (Chrome's Prompt API documents English, Spanish, and Japanese — not Tamil or Hindi); Tamil/Hindi requests and mobile/non-Nano browsers route through Firebase AI Logic cloud fallback (`gemini-2.5-flash`) protected by App Check, which transmits the displayed summary snapshot to Firebase/Google Cloud.
+3. **Bedside Clinician Order Extraction (`/handoff/{token}`):** Clinicians can type a quick bedside note and extract structured test orders (`orders_test`, `mobility`) via Firebase AI Logic (`PREFER_ON_DEVICE` desktop Chrome Nano or App-Check-protected Cloud Gemini fallback on mobile/other browsers) before explicit human confirmation onto the provenance chain.
 4. **Web Document & Bill Ingestion (`POST /api/cases/{case_id}/documents/ingest`):** Credentialed family photo upload from `/app` feeding the private GCS + Ed25519 receipt chain.
 
 ---
 
-## Try it, three ways, none of them needing a login
+## Deployment status & trying KinGuard
 
-**1. From your phone.** WhatsApp **+1 239 453 5380** and send `START`.
+> **Current deployment status:** Self-hosted / local. The legacy Cloud Run URL (`https://kinguard-37j4eofpwq-el.a.run.app`) and sandbox notes in [`infra/DEPLOYED.md`](infra/DEPLOYED.md) document our earlier August 2026 prototype (`anbu-care`) and deployment template — that Cloud Run endpoint is **not** currently live (`404`). Run locally using the steps below or deploy to your own GCP/Firebase project via `make deploy`.
 
-You are given a synthetic family of your own, with your number holding three
-roles on it at once: hers, her son's, and a neighbour's. Every message back is
-captioned with which of the three it was for, because one handset is playing
-three parts. Then tell it she has chest pain, or photograph a hospital bill, and
-watch what each one sets off.
-
-This is not the door being left open. An unknown number still resolves to
-nobody, which is the claim this whole system rests on. `START` hands you a
-different record and legitimate roles on it: nothing you do reaches the family
-in the demo, the parent and the policy are invented, and it is yours for a day.
-An unknown number that sends anything else is told what this is, that its
-message was not stored, and where to look.
-
-**2. From a terminal.** A synthetic parent of your own, a case, and the signed
-chain, with no credential anywhere:
+**1. Offline, with no Google Cloud project and no model access (recommended verification path):**
 
 ```bash
-URL=https://kinguard-37j4eofpwq-el.a.run.app
+make install && make test     # 1,272 tests (in-memory store)
+make demo                     # the full spine, no LLM in the loop,
+                              # ending with a tamper the chain catches
+```
+
+**2. Local server + browser dashboard (`/app`) & terminal API test:**
+
+```bash
+ANBU_STORE_BACKEND=memory uv run uvicorn kinguard.server:app --host 127.0.0.1 --port 8080
+```
+
+Then open [`http://127.0.0.1:8080/app`](http://127.0.0.1:8080/app), or drive a synthetic parent from a terminal with no credential on `/verify`:
+
+```bash
+URL=http://127.0.0.1:8080
 PARENT=$(curl -sX POST "$URL/api/demo/seed?scratch=1" | jq -r .parent_id)
 CASE=$(curl -sX POST $URL/api/intake -H 'content-type: application/json' \
   -d "{\"parent_id\":\"$PARENT\",\"symptoms\":[\"chest pain\"],\"reported_by\":\"judge\"}" | jq -r .case_id)
 curl -s $URL/api/cases/$CASE/verify | jq
 ```
 
-`?scratch=1` matters: without it the seed reuses the demo family, and every
-reader running this would open a case on the record being filmed.
+`?scratch=1` matters: without it the seed reuses the demo family.
 
-**3. Offline, with no Google Cloud project and no model access.**
+**3. Optional WhatsApp sandbox (self-configured Twilio):** When `ANBU_WHATSAPP_MODE=twilio` is configured in your own deployment, sending `START` assigns an isolated synthetic family with three roles on one handset (parent, son, neighbour), while any unknown number sending anything else receives a notice that its message was not stored. (The legacy sandbox number `+1 239 453 5380` belongs to the offline August 2026 prototype and is not active.)
 
-```bash
-make install && make test     # 1,259 tests
-make demo                     # the full spine, no LLM in the loop,
-                              # ending with a tamper the chain catches
-```
-
-**Dashboard:** [`/app`](https://kinguard-37j4eofpwq-el.a.run.app/app) ·
-**health, naming what is simulated:**
-[`/api/healthz`](https://kinguard-37j4eofpwq-el.a.run.app/api/healthz)
+**Local Dashboard:** `http://127.0.0.1:8080/app` ·
+**Health:** `http://127.0.0.1:8080/api/healthz`
 
 ---
 
@@ -79,8 +71,8 @@ an autonomous tick and a human decision as the same arrow.
 
 ### The two access models, both enforced server-side
 
-**Live:** https://kinguard-37j4eofpwq-el.a.run.app ·
-**agent UI:** [`/dev-ui/`](https://kinguard-37j4eofpwq-el.a.run.app/dev-ui/)
+**Local server:** `http://127.0.0.1:8080/app` ·
+**ADK agent endpoints:** `/apps/...`, `/run` (require `Authorization: Bearer ...` session credential)
 
 This contrast is the design, not a configuration detail:
 
@@ -510,7 +502,8 @@ This matters more than any feature list, so it comes first.
   ordinary messages have — "6" is an answer to how she slept, "104" is a
   temperature — so it fires only while a request is actually outstanding for
   that parent, within minutes, from a resolved sender, on a message that is
-  digits and nothing else. Verified live: the same "123456" is a wellbeing
+  digits and nothing else. Verified in the August 2026 prototype (`anbu-care`)
+  and covered by unit tests: the same "123456" is a wellbeing
   check-in with no request open and a code with one. The code is never stored,
   logged or receipted; the chain carries that one was asked for and that the
   request was closed, and nothing that would let anybody replay it.
@@ -650,7 +643,7 @@ This matters more than any feature list, so it comes first.
 
   Two providers are wired, and **Twilio is the working path.** The account is
   upgraded (`type: Full`), and a freeform `Body` send with no `ContentSid`
-  reaches a real handset — verified end to end on 2026-08-22, `status:
+  reaches a real handset — verified in the August 2026 prototype on 2026-08-22, `status:
   delivered`. This reverses an earlier note in this README: on a Twilio *trial*
   account freeform sends are rejected with `21654 ContentSid Required` while the
   Content API that would satisfy it returns `20003 not available on a Trial
@@ -767,15 +760,15 @@ See [`docs/CITATIONS.md`](docs/CITATIONS.md) before repeating any of them.
 
 ### Testing Firebase AI Logic Hybrid Inference (On-Device + Cloud Fallback)
 
-1. Provision Firebase AI Logic in your Firebase project (`npx firebase-tools init ailogic`, choose Gemini Developer API or Vertex AI), register a Web App, and set `ANBU_FIREBASE_*` + `ANBU_FIREBASE_RECAPTCHA_SITE_KEY` (or `ANBU_FIREBASE_APPCHECK_DEBUG=true` for local/demo debug tokens) in `.env`.
-2. **On-Device Gemini Nano (Chrome Desktop):** Enable `chrome://flags/#optimization-guide-on-device-model` (`Enabled BypassPerfRequirement`) and `chrome://flags/#prompt-api-for-gemini-nano` (`Enabled`), verify `Ready` at `chrome://on-device-internals`, open `/app`, and watch symptom normalisation and plain-language record explanations execute locally with the **`⚡ On-Device (Gemini Nano)`** badge and zero outbound cloud LLM calls.
-3. **Automatic Cloud Fallback:** Open `/app` in a standard browser without Gemini Nano and trigger the same controls — `InferenceMode.PREFER_ON_DEVICE` automatically falls back to `gemini-2.5-flash` via Firebase AI Logic + App Check (`☁️ Cloud Fallback`).
+1. Provision Firebase AI Logic in your Firebase project (`npx firebase-tools init ailogic`, choose Gemini Developer API or Vertex AI), register a Web App, and set `KINGUARD_FIREBASE_*` (or `ANBU_FIREBASE_*`) + `KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY` (or `KINGUARD_FIREBASE_APPCHECK_DEBUG=true` for local/demo debug tokens) in `.env`.
+2. **On-Device Gemini Nano (Chrome Desktop, English):** Enable `chrome://flags/#optimization-guide-on-device-model` (`Enabled BypassPerfRequirement`) and `chrome://flags/#prompt-api-for-gemini-nano` (`Enabled`), verify `Ready` at `chrome://on-device-internals`, open `/app`, and watch English symptom normalisation and plain-language English explanations execute locally with the **`⚡ On-Device (Gemini Nano)`** badge. (Note: Chrome's Prompt API documents `en`, `es`, and `ja`; Tamil/Hindi and mobile browsers use Cloud Fallback below.)
+3. **Automatic Cloud Fallback:** In standard browsers, mobile phones, or non-English (Tamil/Hindi) inputs, `InferenceMode.PREFER_ON_DEVICE` falls back to `gemini-2.5-flash` via Firebase AI Logic + App Check (`☁️ Cloud Fallback`). Client-side deterministic `maskPII()` redacts phone numbers, emails, and IDs before prompt transmission.
 
 ## Quick start
 
 ```bash
 make install          # uv sync --extra dev
-make test             # 1258 tests, no GCP or model access needed
+make test             # 1,272 tests, no GCP or model access needed
                       # (one more needs a Memory Bank and skips without it)
 make preflight        # the state that silently ruins a recording, in ~2s
 make demo             # the full spine, end to end, with no model in the loop
@@ -820,8 +813,8 @@ Every mandatory requirement, and where it is actually load-bearing.
 
 | Requirement | Used for |
 |---|---|
-| **Firebase AI Logic (`firebase/ai` v13.4.0)** | Client-side hybrid inference (`InferenceMode.PREFER_ON_DEVICE`, `GoogleAIBackend`) in `/app` and `/handoff/{token}`: runs local **Gemini Nano** via Chrome's Prompt API first for zero-cost multilingual symptom normalisation, PII redaction preview, plain-language/Tamil/Hindi record explanation, and bedside order extraction, with automatic fallback to Cloud Gemini (`gemini-2.5-flash`). |
-| **Firebase App Check** | `ReCaptchaEnterpriseProvider` (production) and registered Debug Token (dev/judging) protecting Firebase AI Logic cloud fallback endpoints. |
+| **Firebase AI Logic (`firebase/ai` v13.4.0)** | Client-side hybrid inference (`InferenceMode.PREFER_ON_DEVICE`, `GoogleAIBackend`) in `/app` and `/handoff/{token}`: runs local **Gemini Nano** on supported desktop Chrome (English) after deterministic client-side PII masking, with automatic fallback to Cloud Gemini (`gemini-2.5-flash`) for Tamil/Tanglish/Hindi, mobile browsers, and non-Nano environments. |
+| **Firebase App Check** | `ReCaptchaEnterpriseProvider` (production) and debug-token initialization (`CustomProvider` fallback when no reCAPTCHA site key is configured) protecting Firebase AI Logic cloud fallback requests. |
 | **Gemini 3.5 (Vertex AI)** | Multimodal reasoning over discharge summaries, lab reports, ECG images and prescriptions; policy-clause matching; and single-call transcription of inbound WhatsApp voice notes. Deployed default is `gemini-3.5-flash`, configurable via `ANBU_MODEL`. |
 | **Gemini 2.5 Flash Lite (Vertex AI)** | The one call that deliberately does *not* use `ANBU_MODEL`. It decides which language she actually writes in, so the next admission's first check-in is not in the language somebody chose for her on a form. A question with a two-letter answer, on a path that already owes her a reply inside fifteen seconds, is the wrong place to spend a frontier model. The answer is checked against a closed list of eight languages before it is believed. |
 | **Google ADK** | Five sub-agents with isolated tool scopes under one coordinator. |
@@ -985,7 +978,7 @@ scripts/
   build_architecture_svg.py  the architecture diagram, hand-authored rather than laid out
   make_architecture_pdf.py   the two-page PDF, and the README's PNG, from that one SVG
   seed_breach.sh        an already-lapsed cashless clock, for demonstrating the breach
-tests/                  1258 tests, no GCP or model access needed
+tests/                  1,272 tests, no GCP or model access needed
 infra/deploy_cloud_run.sh
 infra/deploy_booker.sh
 infra/schedule_recovery_tick.sh  the two ticks Cloud Run cannot hold itself
@@ -1375,8 +1368,10 @@ Then deploy a new revision — running instances do not pick up IAM changes.
 
 ## Disclosure
 
-KinGuard reimplements two patterns from our own prior work, written fresh
-during the submission window. See [`DISCLOSURE.md`](DISCLOSURE.md).
+KinGuard builds on our prior August 2026 eldercare prototype (`anbu-care`) and
+reimplements two prior patterns (`Verigate`, `GenuProof`), combined with
+newly developed Firebase Hybrid AI Logic, App Check, security hardening, and
+provenance guarantees for this submission. See [`DISCLOSURE.md`](DISCLOSURE.md).
 
 ## Author
 

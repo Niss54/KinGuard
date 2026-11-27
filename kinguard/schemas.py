@@ -3,15 +3,27 @@ returns one of these shapes so agents stay swappable."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import threading
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+_CLOCK_LOCK = threading.Lock()
+_LAST_UTC_US = 0
+
 
 def utcnow() -> datetime:
-    return datetime.now(UTC)
+    """UTC wall clock guaranteed strictly monotonic across sequential calls."""
+    global _LAST_UTC_US
+    now_us = int((datetime.now(UTC) - _EPOCH) // timedelta(microseconds=1))
+    with _CLOCK_LOCK:
+        if now_us <= _LAST_UTC_US:
+            now_us = _LAST_UTC_US + 1
+        _LAST_UTC_US = now_us
+    return _EPOCH + timedelta(microseconds=now_us)
 
 
 # --------------------------------------------------------------------------

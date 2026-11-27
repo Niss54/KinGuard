@@ -6,24 +6,25 @@ Submitted under the **Firebase Hybrid AI Hackathon** guidelines:
 
 * **Core Platform & Architecture:** The FastAPI + Google ADK multi-agent backend, Ed25519 provenance chain, deterministic severity/comms/payment/booking guards, WhatsApp integration, Playwright clinic booker, and `/app` & `/handoff/{token}` interfaces.
 * **Core Value:** An eldercare & Indian health-insurance coordination engine where deterministic Python code holds life-safety, DPDP privacy, and financial boundaries.
-* **Firebase Hybrid AI Implementation:**
+* **Firebase Hybrid AI & Security Implementation (new in this submission):**
   1. `GET /api/firebase-config` + `KINGUARD_FIREBASE_*` environment and Cloud Run deployment configuration.
   2. Client-side **Firebase AI Logic (`firebase/ai` v13.4.0, `InferenceMode.PREFER_ON_DEVICE`)** and **Firebase App Check** integration in `/app` and `/handoff/{token}`:
-     - On-device Gemini Nano multilingual symptom normaliser & local PII masking preview (`intake.hybrid_normalized` receipt).
-     - On-device plain-language & multilingual (Tamil/Hindi) Arrival, Record, and Claim summaries.
-     - On-device bedside clinician order & mobility extraction prior to explicit human confirmation.
+     - Deterministic client-side PII redaction (`maskPII`) executed in-browser before sending symptom text to any model or `/api/intake`, paired with advisory symptom normalisation (`intake.hybrid_normalized` receipt). On-device Gemini Nano targets supported desktop Chrome (English); Tamil/Tanglish/Hindi and mobile/non-Nano browsers route through Cloud Gemini (`gemini-2.5-flash`) fallback gated by App Check.
+     - Plain-language & multilingual (English/Tamil/Hindi) Arrival, Record, and Claim companion summaries (local on-device in desktop Chrome when Nano supports the language; App-Check-gated Cloud Gemini fallback otherwise).
+     - Bedside clinician order & mobility extraction prior to explicit human confirmation (`PREFER_ON_DEVICE` desktop Chrome Nano or Cloud Gemini fallback).
   3. Authenticated web document/bill ingestion endpoint `POST /api/cases/{case_id}/documents/ingest`.
-  4. Hybrid AI test coverage (`tests/test_hybrid_ai_surface.py`).
+  4. Server-side hardening: parent-case ownership validation on `POST /api/intake` / `run_triage`, authentication enforcement on ADK session/execution endpoints, atomic compare-and-set (`put_if_absent`) receipt persistence preventing concurrent overwrites, and trusted signer public-key pinning in `verify_chain`.
+  5. Hybrid AI & security/provenance test coverage (`tests/test_hybrid_ai_surface.py`, `tests/test_security_and_provenance.py`).
 
 ---
 
-## Architectural Principles & Prior Design Patterns
+## Prior Work & Project Provenance
 
 ## Summary
 
-**No code was lifted from any prior repository.** Every file in this repository
-was written during the submission window. Two *design patterns* from our own
-earlier projects were reimplemented from scratch here, and they are named below.
+KinGuard is built on top of our own earlier 2026 eldercare prototype (`anbu-care` — whose August 2026 prototype logs, seeded Thoothukudi hospital snapshot dates, and WhatsApp sandbox verification notes are referenced transparently in [`README.md`](README.md) and [`infra/DEPLOYED.md`](infra/DEPLOYED.md)), plus two design patterns from our earlier projects (`Verigate` and `GenuProof`). Significant new functionality — specifically the Firebase AI Logic hybrid inference tier, Firebase App Check integration, web document/bill ingestion, and the security/provenance fixes listed above — was authored and integrated for this Firebase Hybrid AI Hackathon submission.
+
+> **Deployment disclosure:** The live Cloud Run URL documented in [`infra/DEPLOYED.md`](infra/DEPLOYED.md) (`https://kinguard-37j4eofpwq-el.a.run.app`) reflects the August 2026 prototype deployment configuration and is **not** currently live (`404`); evaluators can reproduce all automated checks and the local dashboard (`http://127.0.0.1:8080/app`) locally offline or self-deploy with `make deploy`.
 
 ## Pattern 1 — confidence-gated evidence decisioning (STEP_UP)
 
@@ -132,6 +133,6 @@ Standard open-source libraries, unmodified, declared in `pyproject.toml`:
 `google-adk`, `google-cloud-firestore`, `google-cloud-pubsub`, `pydantic`,
 `cryptography`, `fastapi`, `uvicorn`, `python-dotenv`.
 
-## Provenance of this repository
+## Repository history
 
-Every commit in this repository falls inside the Firebase Hybrid AI Hackathon submission window. `git log` is the record.
+The git repository was initialized from our existing `anbu-care` codebase and updated with the KinGuard Firebase Hybrid AI Hackathon features, security/provenance fixes, and MIT license. See `git log` for commits.

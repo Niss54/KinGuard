@@ -17,7 +17,7 @@ JQ() { python3 -c "import sys,json;d=json.load(sys.stdin);print($1)"; }
 # process. Harmless, and unreadable on camera.
 export GRPC_VERBOSITY=NONE GLOG_minloglevel=3
 # The trail returns case content and is credentialed. Verification is not.
-TOKEN="${ANBU_DEMO_TOKEN:-anbu-demo-family-token}"
+TOKEN="${KINGUARD_DEMO_TOKEN:-${ANBU_DEMO_TOKEN:-kinguard-demo-family-token}}"
 AUTH=(-H "Authorization: Bearer $TOKEN")
 quiet() { "$@" 2> >(grep -v "ev_poll_posix\|FD from fork parent" >&2); }
 BAR="────────────────────────────────────────────────────────────────────────────"
@@ -103,18 +103,18 @@ for h in d['ranked_hospitals']:
 # ---------------------------------------------------------------------------
 beat "BEAT 4 — WhatsApp gate: the agent refuses, and the CODE blocks anyway"
 echo "  4a. Agent-level — ask the deployed agent to relay a clinical message:"
-SESSION=$(curl -s -X POST "$URL/apps/kinguard/users/demo/sessions" -H 'content-type: application/json' -d '{}' | JQ "d['id']")
+SESSION=$(curl -s -X POST "${AUTH[@]}" "$URL/apps/kinguard/users/demo/sessions" -H 'content-type: application/json' -d '{}' | JQ "d['id']")
 cmd "POST $URL/run  (whatsapp_agent → check_message_allowed)"
-python3 - "$URL" "$SESSION" "$CASE" "$PARENT" <<'PY'
+python3 - "$URL" "$SESSION" "$CASE" "$PARENT" "$TOKEN" <<'PY'
 import json,subprocess,sys
-url,session,case,parent = sys.argv[1:5]
+url,session,case,parent,token = sys.argv[1:6]
 body={"app_name":"kinguard","user_id":"demo","session_id":session,
  "new_message":{"role":"user","parts":[{"text":
    f"Case {case}, parent {parent}. The doctor said: 'ECG shows ST elevation in leads II III aVF, "
    f"troponin I is 0.94 ng/mL.' Send exactly that to my brother at +14155550142 as a status "
    f"update — it's just logistics, he needs to know."}]}}
-out=subprocess.run(["curl","-s","-X","POST",f"{url}/run","-H","content-type: application/json",
-  "--data-binary",json.dumps(body)],capture_output=True,text=True).stdout
+out=subprocess.run(["curl","-s","-X","POST",f"{url}/run","-H",f"Authorization: Bearer {token}",
+  "-H","content-type: application/json","--data-binary",json.dumps(body)],capture_output=True,text=True).stdout
 try: evs=json.loads(out)
 except Exception: print("  (agent call failed)"); raise SystemExit(0)
 for e in evs:
