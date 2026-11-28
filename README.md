@@ -10,8 +10,8 @@ Built for the **[Firebase Hybrid AI Hackathon](https://firebasehybridaihackathon
 
 KinGuard preserves a strict architectural boundary — *"Guardrails that matter are code, not prompts"* — while adding client-side hybrid inference and deterministic PII redaction on top of our existing coordination core (see [`DISCLOSURE.md`](DISCLOSURE.md)):
 
-1. **Client-Side Advisory Intake & Deterministic PII Masking (`/app`):** Before any model or triage request leaves the browser, deterministic client-side redaction (`maskPII`) masks direct identifiers (phone numbers, emails, Aadhaar-like IDs, postal codes and explicit numbered units; this heuristic does not anonymise all names or addresses). **Firebase AI Logic (`firebase/ai`, `InferenceMode.PREFER_ON_DEVICE`)** then normalises masked symptom reports — using on-device **Gemini Nano** on supported desktop Chrome for English, and automatically falling back via **Firebase App Check** to Cloud Gemini (`gemini-2.5-flash`) for Tamil/Tanglish/Hindi or browsers without Nano — before deterministic `RED_FLAGS` triage runs on the backend.
-2. **Plain-Language & Multilingual Record Companion (`/app`):** Families can summarise their parent's already-loaded Arrival Brief, Lab Deltas, or Bill Split in plain English, Tamil, or Hindi. On-device execution via Gemini Nano applies only on supported desktop Chrome (Chrome's Prompt API documents English, Spanish, and Japanese — not Tamil or Hindi); Tamil/Hindi requests and mobile/non-Nano browsers route through Firebase AI Logic cloud fallback (`gemini-2.5-flash`) protected by App Check, which transmits the displayed summary snapshot to Firebase/Google Cloud.
+1. **Client-Side Advisory Intake & Deterministic PII Masking (`/app`):** Before any model or triage request leaves the browser, deterministic client-side redaction (`maskPII`) masks direct identifiers (phone numbers, emails, Aadhaar-like IDs, postal codes and explicit numbered units; this heuristic does not anonymise all names or addresses). **Firebase AI Logic (`firebase/ai`, `InferenceMode.PREFER_ON_DEVICE`)** then normalises masked symptom reports — using on-device **Gemini Nano** for explicitly selected English on supported desktop Chrome. Mixed/Tamil/Hindi/unsure input (the default) explicitly uses `ONLY_IN_CLOUD` via **Firebase App Check** and Cloud Gemini (`gemini-3.5-flash-lite`); English falls back to cloud if Nano is unavailable — before deterministic `RED_FLAGS` triage runs on the backend.
+2. **Plain-Language & Multilingual Record Companion (`/app`):** Families can summarise their parent's already-loaded Arrival Brief, Lab Deltas, or Bill Split in plain English, Tamil, or Hindi. On-device execution via Gemini Nano applies only on supported desktop Chrome (Chrome's Prompt API documents English, Spanish, and Japanese — not Tamil or Hindi); Tamil/Hindi requests and mobile/non-Nano browsers route through Firebase AI Logic cloud fallback (`gemini-3.5-flash-lite`) protected by App Check, which transmits the displayed summary snapshot to Firebase/Google Cloud.
 3. **Bedside Clinician Order Extraction (`/handoff/{token}`):** Clinicians can type a quick bedside note and extract structured test orders (`orders_test`, `mobility`) via Firebase AI Logic (`PREFER_ON_DEVICE` desktop Chrome Nano or App-Check-protected Cloud Gemini fallback on mobile/other browsers) before explicit human confirmation onto the provenance chain.
 4. **Web Document & Bill Ingestion (`POST /api/cases/{case_id}/documents/ingest`):** Credentialed family photo upload from `/app` feeding the private GCS + Ed25519 receipt chain.
 
@@ -715,25 +715,28 @@ See [`docs/CITATIONS.md`](docs/CITATIONS.md) before repeating any of them.
 
 ### Testing Firebase AI Logic Hybrid Inference (On-Device + Cloud Fallback)
 
-1. Provision Firebase AI Logic in your Firebase project (`npx firebase-tools init ailogic`, choose Gemini Developer API or Vertex AI), register a Web App, and set `KINGUARD_FIREBASE_*` + `KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY` (or `KINGUARD_FIREBASE_APPCHECK_DEBUG=true` for local/demo debug tokens) in `.env`.
-2. **On-Device Gemini Nano (Chrome Desktop, English):** Enable `chrome://flags/#optimization-guide-on-device-model` (`Enabled BypassPerfRequirement`) and `chrome://flags/#prompt-api-for-gemini-nano` (`Enabled`), verify `Ready` at `chrome://on-device-internals`, open `/app`, and watch English symptom normalisation and plain-language English explanations execute locally with the **`⚡ On-Device (Gemini Nano)`** badge. (Note: Chrome's Prompt API documents `en`, `es`, and `ja`; Tamil/Hindi and mobile browsers use Cloud Fallback below.)
-3. **Automatic Cloud Fallback:** In standard browsers, mobile phones, or non-English (Tamil/Hindi) inputs, `InferenceMode.PREFER_ON_DEVICE` falls back to `gemini-2.5-flash` via Firebase AI Logic + App Check (`☁️ Cloud Fallback`). Client-side deterministic `maskPII()` redacts phone numbers, emails, and IDs before prompt transmission.
+Use the [judge setup and verification guide](docs/JUDGE_GUIDE.md) for prerequisites, Windows/Bash commands, seed/login, expected outputs, and the complete App Check debug-token registration flow.
+
+1. Enable Firebase AI Logic with **Gemini Developer API** and register a Firebase Web App. This browser implementation uses `GoogleAIBackend`; backend Vertex configuration is separate. Set the public `KINGUARD_FIREBASE_*` values and App Check settings in an ignored `.local.env`.
+2. For local Nano, use supported desktop Chrome 139+ and enable `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input`, then relaunch. Select **English (prefer on-device)** and click **Normalise**. The app calls `initializeDeviceModel()` from the click path, awaits the first download and displays progress. Hardware support and available disk space still apply. The actual response source badge, not configuration status, is the evidence of local inference.
+3. Mixed/Tamil/Hindi/unsure input defaults to an explicit `ONLY_IN_CLOUD` model. Tamil/Hindi explanation buttons also force cloud. Indic-script text is routed to cloud even if English was selected. Romanised language cannot reliably be inferred from spelling; leave mixed-language input on the default selection. On mobile or unsupported desktops, English falls back to cloud after device initialization reports unavailable. Cloud requires valid App Check, API access and quota.
+4. The browser and backend language detector now default to `gemini-3.5-flash-lite`. Update old environment overrides too. Actual model outputs, App Check authorization and provider execution still require Avika's configured live acceptance run; offline tests do not establish them.
+
+References: [Firebase hybrid setup](https://firebase.google.com/docs/ai-logic/hybrid/web/get-started), [model lifecycle](https://firebase.google.com/docs/ai-logic/faq-and-troubleshooting).
 
 ## Quick start
 
+Start with the [judge guide](docs/JUDGE_GUIDE.md). It includes native PowerShell and Bash instructions; `make` is optional. Python 3.12+, uv, and Node.js 22 are the test prerequisites.
+
 ```bash
-make install          # uv sync --extra dev
-make test             # 1,279 tests, no GCP or model access needed
+make install          # uv sync --frozen --extra dev
+make test             # offline suite, including Node browser regressions
                       # (one more needs a Memory Bank and skips without it)
 make preflight        # the state that silently ruins a recording, in ~2s
 make demo             # the full spine, end to end, with no model in the loop
 ```
 
-`./booker/                 the browser service, deployed apart from the API
-  Dockerfile            Playwright image; Chromium will not fit beside the API
-  driver.py             navigate, read the form, validate, fill, submit
-  app.py                two endpoints and a session parked on a one-time code
-scripts/demo_run.sh` drives the **deployed** service through the full demo
+`scripts/demo_run.sh` drives the **deployed** service through the full demo
 narrative — fresh synthetic cases each run, a separate throwaway case for the
 tamper beat, and `--reset` to clean up. It is the reproducible path: it needs no
 beat sheet and no person reading one, which is the point.
@@ -768,7 +771,7 @@ Every mandatory requirement, and where it is actually load-bearing.
 
 | Requirement | Used for |
 |---|---|
-| **Firebase AI Logic (`firebase/ai` v13.4.0)** | Client-side hybrid inference (`InferenceMode.PREFER_ON_DEVICE`, `GoogleAIBackend`) in `/app` and `/handoff/{token}`: runs local **Gemini Nano** on supported desktop Chrome (English) after deterministic client-side PII masking, with automatic fallback to Cloud Gemini (`gemini-2.5-flash`) for Tamil/Tanglish/Hindi, mobile browsers, and non-Nano environments. |
+| **Firebase AI Logic (`firebase/ai` v13.4.0)** | Client-side hybrid inference (`InferenceMode.PREFER_ON_DEVICE`, `GoogleAIBackend`) in `/app` and `/handoff/{token}`: runs local **Gemini Nano** on supported desktop Chrome (English) after deterministic client-side PII masking, with explicit cloud routing for mixed/Tamil/Hindi input and cloud fallback for English on non-Nano browsers. First English use initializes/downloads Nano from a click. See the judge guide. |
 | **Firebase App Check** | `ReCaptchaEnterpriseProvider` (production) and debug-token initialization (`CustomProvider` fallback when no reCAPTCHA site key is configured) protecting Firebase AI Logic cloud fallback requests. |
 | **Gemini 3.5 (Vertex AI)** | Multimodal reasoning over discharge summaries, lab reports, ECG images and prescriptions; policy-clause matching; and single-call transcription of inbound WhatsApp voice notes. Deployed default is `gemini-3.5-flash`, configurable via `KINGUARD_MODEL`. |
 | **Gemini 2.5 Flash Lite (Vertex AI)** | The one call that deliberately does *not* use `KINGUARD_MODEL`. It decides which language she actually writes in, so the next admission's first check-in is not in the language somebody chose for her on a form. A question with a two-letter answer, on a path that already owes her a reply inside fifteen seconds, is the wrong place to spend a frontier model. The answer is checked against a closed list of eight languages before it is believed. |

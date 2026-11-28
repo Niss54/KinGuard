@@ -198,8 +198,10 @@ def test_swapping_public_key_and_resigning_fails_pinned_verification(client: Tes
 
 def test_webui_and_handoff_app_check_debug_pii_masking_and_stale_guards(client: TestClient) -> None:
     html = client.get("/app").text
-    assert "CustomProvider" in html
-    assert "appCheckOk" in html
+    shared = client.get("/hybrid.js").text
+    assert "CustomProvider" in shared
+    assert "appCheckActive" in shared
+    assert 'src="/hybrid.js"' in html
     assert "maskPII(text)" in html
     assert "sourceText" in html
     assert "resetCaseScopedState" in html
@@ -216,8 +218,8 @@ def test_webui_and_handoff_app_check_debug_pii_masking_and_stale_guards(client: 
         )
         assert mint.status_code == 200
         handoff_html = client.get(mint.json()["url"]).text
-        assert "CustomProvider" in handoff_html
-        assert "appCheckOk" in handoff_html
+        assert "src=/hybrid.js" in handoff_html
+        assert "KinGuardHybrid.create" in handoff_html
 
 
 def test_demo_token_config_matches_webui_env_example_and_deploy_script(client: TestClient) -> None:

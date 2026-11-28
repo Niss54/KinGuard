@@ -413,6 +413,7 @@ textarea.hyb-ta:focus{outline:0;border:2px solid var(--teal);padding:10px 11px}
 </nav>
 
 <main id="app"></main>
+<script src="/hybrid.js"></script>
 <script>
 const API = location.origin;
 const S = { caseId:null, parentId:null, token:null, trail:null, brief:null,
@@ -424,7 +425,8 @@ const S = { caseId:null, parentId:null, token:null, trail:null, brief:null,
             intakeOpen:false,
             hybrid:{
               ready:false, configured:false, appCheckActive:false, nanoStatus:"checking", reason:"Initialising…",
-              lastSource:null, model:null, cloudModel:"gemini-2.5-flash",
+              lastSource:null, model:null, cloudModel:"gemini-3.5-flash-lite",
+              intakeLanguage:"auto",
               intakeText:"", intakeBusy:false, intakeNorm:null, intakeErr:null, intakeSubmitted:null,
               explainBusy:false, explainOut:null, explainErr:null, explainScope:null,
               explainLang:"en", explainSource:null,
@@ -449,13 +451,21 @@ const DOC_LABEL = {blood_report:"Lab report", prescription:"Prescription",
                    discharge_summary:"Discharge summary", policy:"Policy schedule"};
 const title = (h, p) => `<div class="title"><h1>${esc(h)}</h1><p>${esc(p)}</p></div>`;
 
-async function api(path, {auth=false} = {}) {
-  const headers = auth && S.token ? { Authorization:`Bearer ${S.token}` } : {};
+function requestContext(){
+  return {caseId:S.caseId, parentId:S.parentId, token:S.token, linkToken:S.linkToken,
+          epoch:S._contextEpoch || 0};
+}
+function contextIsCurrent(ctx){
+  return ctx.caseId === S.caseId && ctx.token === S.token && ctx.linkToken === S.linkToken
+    && ctx.epoch === (S._contextEpoch || 0);
+}
+async function api(path, {auth=false, context=requestContext()} = {}) {
+  const headers = auth && context.token ? { Authorization:`Bearer ${context.token}` } : {};
   // A signed link stands in for a session. Both ids ride along because a
   // parent-scoped path has no case in it for the server to check against.
-  if (auth && !S.token && S.linkToken && S.caseId) {
+  if (auth && !context.token && context.linkToken && context.caseId) {
     const sep = path.includes("?") ? "&" : "?";
-    path = `${path}${sep}t=${encodeURIComponent(S.linkToken)}&case=${encodeURIComponent(S.caseId)}`;
+    path = `${path}${sep}t=${encodeURIComponent(context.linkToken)}&case=${encodeURIComponent(context.caseId)}`;
   }
   const r = await fetch(API + path, { headers });
   if (r.status === 401 || r.status === 403) {
@@ -463,9 +473,10 @@ async function api(path, {auth=false} = {}) {
     // A Google ID token expires in about an hour. Silently rendering "denied"
     // to someone who signed in ten minutes ago reads as a broken page, so the
     // session is dropped and the gate comes back with a reason.
-    if (r.status === 401 && S.token && S.token.split(".").length === 3) {
+    if (r.status === 401 && contextIsCurrent(context) && context.token?.split(".").length === 3) {
       S.token = null; S.who = null;
       S.authError = "That sign-in expired. Sign in again to reopen the record.";
+      resetCaseScopedState(false); render();
     }
     return { __denied:true, detail };
   }
@@ -688,9 +699,8 @@ function vNow(){
     </div>
     <p class="mute" style="margin-top:12px;font-size:13px">
       A message recorded as sent was accepted by WhatsApp for delivery. That is
-      acceptance, not a handset receipt, and this deployment sends through a
-      sandbox that only reaches opted-in numbers. Said once here rather than on
-      every line it applies to.</p>
+      acceptance, not a handset receipt. Actual delivery depends on the configured
+      provider; a missing or failed transport is recorded as not delivered.</p>
   </div>`;
 }
 
@@ -725,8 +735,8 @@ function vBrief(){
           <div class="v">${state(x.to_e164)}</div>
         </div>`).join("")}
       <p class="mute" style="margin-top:12px">
-        KinGuard notifies these people. It does not integrate with any hospital or
-        clinician, and nobody here can reply into the system.</p></div>`;
+        KinGuard can notify these contacts through a configured provider. Authorized
+        replies and signed clinician handoff notes are supported; no hospital EHR is integrated.</p></div>`;
   }
 
   // Check-ins are quoted, never summarised. Paraphrasing a self-report is the
@@ -914,33 +924,39 @@ function vHandoff(){
 // nurse; in the situation this exists for the family is asleep eleven time
 // zones away, so the link goes to the phone they already have.
 async function sendHandoff(toCareCircle){
+  const ctx = requestContext();
   S.handoff = {__working:true}; render();
   try{
     const q = toCareCircle ? "?to_care_circle=true" : "";
-    const r = await fetch(API + `/api/cases/${encodeURIComponent(S.caseId)}/handoff-link/send${q}`,
-      {method:"POST", headers:{Authorization:`Bearer ${S.token}`}});
+    const r = await fetch(API + `/api/cases/${encodeURIComponent(ctx.caseId)}/handoff-link/send${q}`,
+      {method:"POST", headers:{Authorization:`Bearer ${ctx.token}`}});
     const body = await r.json();
+    if(!contextIsCurrent(ctx)) return;
     S.handoff = r.ok ? {...body, __sent:true} : {__error: body.detail || `HTTP ${r.status}`};
-  }catch(e){ S.handoff = {__error:String(e)}; }
+  }catch(e){ if(!contextIsCurrent(ctx)) return; S.handoff = {__error:String(e)}; }
   render();
 }
 
 async function mintHandoff(){
+  const ctx = requestContext();
   S.handoff = {__working:true}; render();
   try{
-    const r = await fetch(API + `/api/cases/${encodeURIComponent(S.caseId)}/handoff-link`,
-      {method:"POST", headers:{Authorization:`Bearer ${S.token}`}});
+    const r = await fetch(API + `/api/cases/${encodeURIComponent(ctx.caseId)}/handoff-link`,
+      {method:"POST", headers:{Authorization:`Bearer ${ctx.token}`}});
     const body = await r.json();
+    if(!contextIsCurrent(ctx)) return;
     S.handoff = r.ok ? body : {__error: body.detail || `HTTP ${r.status}`};
-  }catch(e){ S.handoff = {__error:String(e)}; }
+  }catch(e){ if(!contextIsCurrent(ctx)) return; S.handoff = {__error:String(e)}; }
   render();
 }
 
 async function revokeHandoff(){
+  const ctx = requestContext();
   try{
-    await fetch(API + `/api/cases/${encodeURIComponent(S.caseId)}/handoff-link/revoke`,
-      {method:"POST", headers:{Authorization:`Bearer ${S.token}`}});
+    await fetch(API + `/api/cases/${encodeURIComponent(ctx.caseId)}/handoff-link/revoke`,
+      {method:"POST", headers:{Authorization:`Bearer ${ctx.token}`}});
   }catch(e){ /* the link dies on expiry regardless */ }
+  if(!contextIsCurrent(ctx)) return;
   S.handoff = null; render();
 }
 
@@ -1032,11 +1048,13 @@ function dxOption(x, i){
 // a diagnosis. So it is fetched with the session rather than linked directly,
 // and the tab is opened from the redirect the server mints.
 async function openClaimForm(btn){
+  const ctx = requestContext();
   const slot = document.getElementById("claim-form-slot");
   if(!slot) return;
   if(btn) btn.disabled = true;
   slot.innerHTML = `<p class="mute" style="margin:10px 0 0">Fetching it…</p>`;
-  const r = await api(`/api/cases/${encodeURIComponent(S.caseId)}/claim-form`, {auth:true});
+  const r = await api(`/api/cases/${encodeURIComponent(ctx.caseId)}/claim-form`, {auth:true, context:ctx});
+  if(!contextIsCurrent(ctx)) return;
   if(btn) btn.disabled = false;
   if(!r || !r.url){
     slot.innerHTML = `<p class="mute" style="margin:10px 0 0">${esc(
@@ -1049,12 +1067,14 @@ async function openClaimForm(btn){
 }
 
 async function showBookingEvidence(id, stage){
+  const ctx = requestContext();
   const slot = document.getElementById(`ev-${id}`);
   if(!slot) return;
   slot.innerHTML = `<p class="mute" style="margin:10px 0 0">Fetching it…</p>`;
-  const r = await api(`/api/cases/${encodeURIComponent(S.caseId)}/appointments/`
+  const r = await api(`/api/cases/${encodeURIComponent(ctx.caseId)}/appointments/`
     + `${encodeURIComponent(id)}/evidence?stage=${encodeURIComponent(stage||"answer")}`,
-    {auth:true});
+    {auth:true, context:ctx});
+  if(!contextIsCurrent(ctx)) return;
   if(!r || !r.url){
     slot.innerHTML = `<p class="mute" style="margin:10px 0 0">${esc(
       (r && r.detail) || "No page was photographed for this one. The appointment stands either way.")}</p>`;
@@ -1736,16 +1756,20 @@ function upiPanel(u){
 }
 
 async function showUpi(paymentId){
+  const ctx = requestContext();
   if(!S.token){
     askSignIn("Seeing where a payment goes needs a signed-in family session.");
     return;
   }
-  const r = await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}`
+  const r = await fetch(`${API}/api/cases/${encodeURIComponent(ctx.caseId)}`
     + `/payments/${encodeURIComponent(paymentId)}/upi`,
-    {headers:{Authorization:`Bearer ${S.token}`}});
+    {headers:{Authorization:`Bearer ${ctx.token}`}});
+  if(!contextIsCurrent(ctx)) return;
   if(!r.ok){ S.payNote = `Could not load the UPI details (HTTP ${r.status}).`;
              S.payNoteOk = false; render(); return; }
-  S.upi = await r.json();
+  const upi = await r.json();
+  if(!contextIsCurrent(ctx)) return;
+  S.upi = upi;
   render();
 }
 
@@ -1804,6 +1828,7 @@ function signInPanel(reason){
 function askSignIn(reason){ S.signInFor = reason; render(); }
 
 async function confirmMandate(){
+  const ctx = requestContext();
   const vpa = document.getElementById("mvpa")?.value?.trim() || "";
   const label = document.getElementById("mlabel")?.value?.trim() || "";
   // Shown back before anything is granted, because this is the one value in
@@ -1818,23 +1843,26 @@ async function confirmMandate(){
     hours: Number(document.getElementById("mhrs")?.value || 0),
     granted_by: S.who?.name || "family",
   };
-  const r = await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}/payment-mandate`,
-    {method:"POST", headers:{Authorization:`Bearer ${S.token}`,
+  const r = await fetch(`${API}/api/cases/${encodeURIComponent(ctx.caseId)}/payment-mandate`,
+    {method:"POST", headers:{Authorization:`Bearer ${ctx.token}`,
      "content-type":"application/json"}, body: JSON.stringify(body)});
   const out = await r.json();
+  if(!contextIsCurrent(ctx)) return;
   if(!r.ok){ S.mandateError = out.detail || `HTTP ${r.status}`; render(); return; }
   S.mandateForm = false; S.mandateError = null;
   await load();
 }
 
 async function revokeMandate(){
+  const ctx = requestContext();
   if(!confirm("Stop automatic payment? Every further bill will need your approval.")) return;
-  await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}/payment-mandate`,
-    {method:"DELETE", headers:{Authorization:`Bearer ${S.token}`}});
-  await load();
+  await fetch(`${API}/api/cases/${encodeURIComponent(ctx.caseId)}/payment-mandate`,
+    {method:"DELETE", headers:{Authorization:`Bearer ${ctx.token}`}});
+  if(contextIsCurrent(ctx)) await load();
 }
 
 async function approvePayment(billId, amount){
+  const ctx = requestContext();
   if(!S.token){
     askSignIn(`Approving ${inr(amount)} for bill ${billId} needs a signed-in family session.`);
     return;
@@ -1842,21 +1870,22 @@ async function approvePayment(billId, amount){
   if(!confirm(`Approve ${inr(amount)} for bill ${billId}?`)) return;
   S.payBusy = billId; render();
   try{
-    const r = await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}/payments/approve`,
-      {method:"POST", headers:{Authorization:`Bearer ${S.token}`,
+    const r = await fetch(`${API}/api/cases/${encodeURIComponent(ctx.caseId)}/payments/approve`,
+      {method:"POST", headers:{Authorization:`Bearer ${ctx.token}`,
        "content-type":"application/json"},
        body: JSON.stringify({bill_id: billId, amount_inr: amount,
                              approved_by: S.who?.name || "family"})});
     const out = await r.json();
+  if(!contextIsCurrent(ctx)) return;
     // Say what happened. The refusal card disappears on reload, and a card
     // vanishing with nothing in its place reads as a failure.
     S.payNote = r.ok
       ? `Approved. ${inr(out.amount_inr ?? amount)} initiated to ${out.payee_label || "the hospital"}. Not settled yet.`
       : `Not approved: ${out.detail || `HTTP ${r.status}`}`;
     S.payNoteOk = r.ok;
-  } catch(e){ S.payNote = `Not approved: ${String(e)}`; S.payNoteOk = false;
-  } finally { S.payBusy = null; }
-  await load();
+  } catch(e){ if(!contextIsCurrent(ctx)) return; S.payNote = `Not approved: ${String(e)}`; S.payNoteOk = false;
+  } finally { if(contextIsCurrent(ctx)) S.payBusy = null; }
+  if(contextIsCurrent(ctx)) await load();
 }
 
 function vClaim(){
@@ -2213,7 +2242,7 @@ async function drawGoogleButton(){
       callback: async (response) => {
         S.token = response.credential;
         S.authError = null; S.signInFor = null;
-        S.who = await api("/api/whoami", {auth:true});
+        S.who = null;
         await load();
       },
     });
@@ -2251,7 +2280,8 @@ function loadGoogleScript(){
 }
 
 function signOut(){
-  S.token = null; S.who = null; S.record = null; S.authError = null;
+  S.token = null; S.linkToken = null; S.who = null; S.authError = null;
+  resetCaseScopedState(false); render();
   try{ google?.accounts?.id?.disableAutoSelect(); }catch{ /* not loaded */ }
   load();
 }
@@ -2264,7 +2294,10 @@ async function doVerify(){
   const out=document.getElementById("vout");
   if(out) out.innerHTML=`<p class="mute">Calling the open endpoint, no credential…</p>`;
   const at=new Date();
-  S.verify=await api(`/api/cases/${S.caseId}/verify`);
+  const ctx=requestContext();
+  const verified=await api(`/api/cases/${ctx.caseId}/verify`, {context:ctx});
+  if(!contextIsCurrent(ctx)) return;
+  S.verify=verified;
   S.verifiedAt=at.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
   render();
 }
@@ -2300,17 +2333,29 @@ function copyVerifyCommand(btn){
            setTimeout(()=>{ btn.textContent = was; }, 1600); }
 }
 async function seed(){
+  const ctx = requestContext();
   document.getElementById("seederr").innerHTML=`<p class="mute" style="margin-top:10px">Seeding…</p>`;
   const s=await (await fetch(`${API}/api/demo/seed?episode=true`,{method:"POST"})).json();
+  if(!contextIsCurrent(ctx)) return;
   S.parentId=s.parent_id; S.caseId=s.case_id; await load();
 }
 function resetCaseScopedState(clearParent = true){
+  S._contextEpoch = (S._contextEpoch || 0) + 1;
+  S._loadGeneration = (S._loadGeneration || 0) + 1;
+  S.hybrid.intakeRequestId = (S.hybrid.intakeRequestId || 0) + 1;
+  S.hybrid.intakeNorm = null;
+  S.hybrid.intakeText = "";
+  S.hybrid.intakeBusy = false;
+  S.hybrid.intakeErr = null;
+  S.hybrid.intakeSubmitted = null;
   S.hybrid.explainRequestId = (S.hybrid.explainRequestId || 0) + 1;
   if(clearParent) S.parentId = null;
   S.trail = null; S.brief = null; S.record = null; S.verify = null;
   S.wellbeing = null; S.careCircle = null; S.recovery = null;
   S.bills = null; S.pay = null; S.dx = null; S.appointments = null;
   S.handoff = null; S.notified = null; S.payNote = null; S.payNoteOk = false;
+  S.upi = null; S.payBusy = null; S.mandateForm = false; S.mandateError = null;
+  S._caseLoading = false; S.hybrid.uploadPrecheck = null;
   S.hybrid.explainBusy = false;
   S.hybrid.explainOut = null;
   S.hybrid.explainErr = null;
@@ -2416,32 +2461,50 @@ function tokenFromLink(){
 }
 
 async function load(){
-  if(S.caseId !== S._loadedCaseId){
+  const identity = JSON.stringify([S.caseId, S.token, S.linkToken]);
+  if(identity !== S._loadedContext){
     resetCaseScopedState(false);
+    S._loadedContext = identity;
     S._loadedCaseId = S.caseId;
+    render();
   }
-  if(!S.hospitals) S.hospitals = (await api("/api/hospitals"))?.hospitals || [];
-  // Whichever credential is held, the header should say who it belongs to.
-  // /api/whoami never 401s, so this is safe to ask on every load.
-  if(S.token && !S.who) S.who = await api("/api/whoami", {auth:true});
-  if(S.caseId){
-    S.trail=await api(`/api/cases/${S.caseId}/trail`,{auth:true});
-    S.brief=await api(`/api/cases/${S.caseId}/brief`,{auth:true});
-    S.verify=await api(`/api/cases/${S.caseId}/verify`);
-    S.bills=await api(`/api/cases/${S.caseId}/bills`,{auth:true});
-    S.pay=await api(`/api/cases/${S.caseId}/payments`,{auth:true});
-    S.dx=await api(`/api/cases/${S.caseId}/diagnostics`,{auth:true});
-    S.appointments=await api(`/api/cases/${S.caseId}/appointments`,{auth:true});
-    if(!S.parentId && S.brief?.brief) S.parentId=S.brief.brief.parent_id;
+  const ctx = requestContext();
+  S._caseLoading = true;
+  const generation = S._loadGeneration = (S._loadGeneration || 0) + 1;
+  const current = () => contextIsCurrent(ctx) && generation === S._loadGeneration;
+  const read = (path, auth=false) => api(path, {auth, context:ctx});
+  const next = {};
+  try{
+    next.hospitals = S.hospitals || (await read("/api/hospitals"))?.hospitals || [];
+    next.who = ctx.token ? await read("/api/whoami", true) : null;
+    if(!current()) return;
+    if(ctx.caseId){
+      const names = ["trail", "brief", "verify", "bills", "pay", "dx", "appointments"];
+      const routes = ["trail", "brief", "verify", "bills", "payments", "diagnostics", "appointments"];
+      const values = await Promise.all(routes.map(route =>
+        read(`/api/cases/${encodeURIComponent(ctx.caseId)}/${route}`, route !== "verify")));
+      names.forEach((name, i) => { next[name] = values[i]; });
+    }
+    if(!current()) return;
+    next.parentId = ctx.caseId ? next.brief?.brief?.parent_id || null : ctx.parentId;
+    if(next.parentId && (ctx.token || ctx.linkToken)){
+      const parent = `/api/parents/${encodeURIComponent(next.parentId)}`;
+      const names = ["record", "wellbeing", "careCircle", "recovery"];
+      const routes = ["", "/wellbeing", "/care-circle", "/recovery"];
+      const values = await Promise.all(routes.map(route => read(parent + route, true)));
+      names.forEach((name, i) => { next[name] = values[i]; });
+    }
+    if(!current()) return;
+    Object.assign(S, next, {booted:true, _caseLoading:false});
+    render();
+  }catch(error){
+    if(current()){
+      resetCaseScopedState(false);
+      S.trail = {__error:"Could not load this case. Check your connection and retry."};
+      S._caseLoading = false;
+      S.booted = true; render();
+    }
   }
-  if(S.parentId && (S.token || S.linkToken)){
-    S.record=await api(`/api/parents/${S.parentId}`,{auth:true});
-    S.wellbeing=await api(`/api/parents/${S.parentId}/wellbeing`,{auth:true});
-    S.careCircle=await api(`/api/parents/${S.parentId}/care-circle`,{auth:true});
-    S.recovery=await api(`/api/parents/${S.parentId}/recovery`,{auth:true});
-  }
-  S.booted = true;
-  render();
 }
 function render(){
   const v={now:vNow,brief:vBrief,routing:vRouting,record:vRecord,claim:vClaim,audit:vAudit};
@@ -2487,79 +2550,28 @@ document.querySelectorAll("nav button").forEach(b=>
 
 /* ===================== Firebase AI Logic (Hybrid AI) ===================== */
 
-const FB_SDK_VER = "13.4.0";
-const FB_CDN = `https://www.gstatic.com/firebasejs/${FB_SDK_VER}`;
-
 async function initHybridAI(){
   const h = S.hybrid;
   try{
-    h.nanoStatus = (window.LanguageModel && typeof window.LanguageModel.availability === "function")
-      ? await window.LanguageModel.availability({expectedOutputs:[{type:"text",languages:["en"]}]})
-      : "unavailable";
-  }catch{ h.nanoStatus = "unavailable"; }
-
-  try{
     const cfg = await api("/api/firebase-config");
     h.configured = !!cfg?.configured;
-    h.cloudModel = cfg?.cloud_fallback_model || "gemini-2.5-flash";
+    h.cloudModel = cfg?.cloud_fallback_model || KinGuardHybrid.DEFAULT_MODEL;
     if(!cfg?.configured){
       h.ready = false;
-      h.reason = h.nanoStatus === "available"
-        ? "On-device Gemini Nano detected in Chrome; set KINGUARD_FIREBASE_* in .env to enable Firebase AI Logic + cloud fallback."
-        : "Set KINGUARD_FIREBASE_* in .env to enable Firebase AI Logic hybrid inference.";
+      h.reason = "Set KINGUARD_FIREBASE_* to enable Firebase AI Logic. Deterministic triage remains available.";
+      render(); return;
+    }
+    h.model = await KinGuardHybrid.create(cfg, (message, status) => {
+      h.reason = message;
+      if(status) h.nanoStatus = status;
       render();
-      return;
-    }
-    const [
-      { initializeApp },
-      { initializeAppCheck, ReCaptchaEnterpriseProvider, CustomProvider },
-      { getAI, getGenerativeModel, GoogleAIBackend, InferenceMode },
-    ] = await Promise.all([
-      import(`${FB_CDN}/firebase-app.js`),
-      import(`${FB_CDN}/firebase-app-check.js`),
-      import(`${FB_CDN}/firebase-ai.js`),
-    ]);
-
-    const app = initializeApp(cfg.firebase_config);
-    let appCheckOk = false;
-    if(cfg.app_check_debug) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-    if(cfg.recaptcha_site_key){
-      initializeAppCheck(app, {
-        provider: new ReCaptchaEnterpriseProvider(cfg.recaptcha_site_key),
-        isTokenAutoRefreshEnabled: true,
-      });
-      appCheckOk = true;
-    }else if(cfg.app_check_debug){
-      initializeAppCheck(app, {
-        provider: new CustomProvider({
-          getToken: () => Promise.reject(new Error("App Check debug mode active")),
-        }),
-        isTokenAutoRefreshEnabled: true,
-      });
-      appCheckOk = true;
-    }
-    h.appCheckActive = appCheckOk;
-    if(h.nanoStatus !== "available" && !appCheckOk){
-      h.ready = false;
-      h.model = null;
-      h.reason = "App Check unconfigured (set KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY or KINGUARD_FIREBASE_APPCHECK_DEBUG=true); cloud fallback unavailable.";
-      render();
-      return;
-    }
-    const ai = getAI(app, { backend: new GoogleAIBackend() });
-    h.model = getGenerativeModel(ai, {
-      mode: InferenceMode.PREFER_ON_DEVICE,
-      inCloudParams: { model: h.cloudModel },
     });
+    h.appCheckActive = h.model.appCheckActive;
     h.ready = true;
-    h.reason = h.nanoStatus === "available"
-      ? (appCheckOk
-          ? `Firebase AI Logic ready: On-device Gemini Nano preferred (desktop Chrome English), fallback ${h.cloudModel}`
-          : `On-device Gemini Nano ready in Chrome; App Check unconfigured so cloud fallback is inactive`)
-      : `Firebase AI Logic ready: Cloud fallback (${h.cloudModel}) active via App Check (Chrome Nano ${h.nanoStatus})`;
-  }catch(e){
-    h.ready = false;
-    h.reason = `Firebase AI Logic init failed: ${String(e)}`;
+    h.reason = "Firebase SDK configured. English selection initializes Nano on your first click; mixed/Tamil/Hindi input uses cloud with App Check. Actual inference is not verified until a response arrives.";
+  }catch(error){
+    h.ready = false; h.model = null;
+    h.reason = `Firebase AI initialization failed: ${String(error)}`;
   }
   render();
 }
@@ -2567,12 +2579,12 @@ async function initHybridAI(){
 function sourceBadge(src){
   if(src === "on_device") return `<span class="hyb-badge nano">⚡ On-Device (Gemini Nano)</span>`;
   if(src === "in_cloud") return `<span class="hyb-badge cloud">☁️ Cloud Fallback (${esc(S.hybrid.cloudModel)})</span>`;
-  return `<span class="hyb-badge slate">Deterministic</span>`;
+  return `<span class="hyb-badge slate">Inference source not reported</span>`;
 }
 
 function hybridStatusBadge(compact){
   const h = S.hybrid;
-  if(h.lastSource){
+  if(h.lastSource && h.lastSource !== "unknown"){
     if(h.lastSource === "on_device")
       return `<span class="hyb-badge nano" title="${esc(h.reason)}">⚡ On-Device Nano</span>`;
     return `<span class="hyb-badge cloud" title="${esc(h.reason)}">☁️ ${compact?"Cloud Fallback":`Cloud Fallback (${esc(h.cloudModel)})`}</span>`;
@@ -2580,7 +2592,7 @@ function hybridStatusBadge(compact){
   if(h.ready && h.nanoStatus === "available")
     return `<span class="hyb-badge nano" title="${esc(h.reason)}">⚡ Nano Ready</span>`;
   if(h.ready)
-    return `<span class="hyb-badge cloud" title="${esc(h.reason)}">☁️ ${compact?"Hybrid Fallback Ready":`Hybrid Ready (${esc(h.cloudModel)})`}</span>`;
+    return `<span class="hyb-badge cloud" title="${esc(h.reason)}">☁️ ${compact?"Hybrid Configured":`Hybrid Configured (${esc(h.cloudModel)})`}</span>`;
   if(h.configured && !h.appCheckActive)
     return `<span class="hyb-badge warn" title="${esc(h.reason)}">${compact?"App Check Needed":"Firebase App Check Needed"}</span>`;
   return `<span class="hyb-badge warn" title="${esc(h.reason)}">${compact?"Hybrid Config Needed":"Firebase AI Config Needed"}</span>`;
@@ -2610,7 +2622,17 @@ function onIntakeTextInput(val){
   }
 }
 
-function setIntakePreset(text){
+function setIntakeLanguage(language){
+  S.hybrid.intakeLanguage = language;
+  S.hybrid.intakeRequestId = (S.hybrid.intakeRequestId || 0) + 1;
+  S.hybrid.intakeBusy = false;
+  S.hybrid.intakeNorm = null;
+  render();
+}
+function setIntakePreset(text, language="auto"){
+  S.hybrid.intakeRequestId = (S.hybrid.intakeRequestId || 0) + 1;
+  S.hybrid.intakeBusy = false;
+  S.hybrid.intakeLanguage = language;
   S.hybrid.intakeText = text;
   S.hybrid.intakeNorm = null;
   S.hybrid.intakeErr = null;
@@ -2622,6 +2644,12 @@ function vHybridIntakeBody(){
   const h = S.hybrid;
   const n = (h.intakeNorm && h.intakeNorm.sourceText === (h.intakeText || "").trim()) ? h.intakeNorm : null;
   return `
+    <label for="hyb-intake-language">Input language</label>
+    <select id="hyb-intake-language" class="hyb-ta" style="min-height:44px"
+      onchange="setIntakeLanguage(this.value)">
+      <option value="auto" ${h.intakeLanguage!=="en"?"selected":""}>Tamil / Hindi / Tanglish / mixed or unsure (cloud)</option>
+      <option value="en" ${h.intakeLanguage==="en"?"selected":""}>English (prefer on-device)</option>
+    </select>
     <textarea id="hyb-intake-ta" class="hyb-ta" oninput="onIntakeTextInput(this.value)"
       placeholder="Describe what happened in English, Tamil, Tanglish, or Hindi (e.g. 'amma fell, maarbu vali, sweating, says it is probably gas')">${esc(h.intakeText)}</textarea>
     <div class="hyb-chips">
@@ -2629,7 +2657,7 @@ function vHybridIntakeBody(){
         Sample: Tanglish + PII chest heaviness</button>
       <button type="button" class="hyb-chipbtn" onclick="setIntakePreset('maa ko chakkar aa raha hai, had a minor fall near bathroom, BP high')">
         Sample: Hindi dizziness + fall</button>
-      <button type="button" class="hyb-chipbtn" onclick="setIntakePreset('mild fever 99.8F and cough since morning, eating normally')">
+      <button type="button" class="hyb-chipbtn" onclick="setIntakePreset('mild fever 99.8F and cough since morning, eating normally','en')">
         Sample: Mild fever + cough</button>
     </div>
     <p class="mute" style="margin-top:8px;font-size:12.5px">${esc(h.reason)}</p>
@@ -2662,6 +2690,11 @@ function vHybridIntakeBody(){
 
 async function runHybridNormalize(){
   const h = S.hybrid;
+  const ctx = requestContext();
+  const requestId = h.intakeRequestId = (h.intakeRequestId || 0) + 1;
+  const language = h.intakeLanguage || "auto";
+  const current = () => contextIsCurrent(ctx) && requestId === h.intakeRequestId
+    && language === (h.intakeLanguage || "auto");
   const text = (document.getElementById("hyb-intake-ta")?.value ?? h.intakeText ?? "").trim();
   h.intakeText = text;
   h.intakeErr = null;
@@ -2686,8 +2719,9 @@ async function runHybridNormalize(){
       "",
       "Message: " + maskedText,
     ].join("\n");
-    const res = await h.model.generateContent(prompt);
-    const src = res.response.inferenceSource || "in_cloud";
+    const res = await h.model.generateContent(prompt, {inputLanguage:language});
+    if(!current() || h.intakeText.trim() !== text) return;
+    const src = res.response.inferenceSource || "unknown";
     h.lastSource = src;
     const raw = (res.response.text() || "").trim();
     const jm = raw.match(/\{[\s\S]*\}/);
@@ -2701,16 +2735,18 @@ async function runHybridNormalize(){
       advisory_note: String(parsed.advisory_note || ""),
     };
   }catch(e){
-    h.intakeErr = `Hybrid AI normalisation failed: ${String(e)}. You can still run deterministic triage directly.`;
+    if(current()) h.intakeErr = `Hybrid AI normalisation failed: ${String(e)}. You can still run deterministic triage directly.`;
   }finally{
-    h.intakeBusy = false;
-    render();
+    if(current()){ h.intakeBusy = false; render(); }
   }
 }
 
 async function submitHybridIntake(){
   const h = S.hybrid;
+  const ctx = requestContext();
+  const current = () => contextIsCurrent(ctx);
   if(!S.token){ h.intakeErr = "Sign in before opening a case."; render(); return; }
+  if(S._caseLoading){ h.intakeErr = "Wait for the current case to finish loading, then retry."; render(); return; }
   const text = (document.getElementById("hyb-intake-ta")?.value ?? h.intakeText ?? "").trim();
   h.intakeText = text;
   h.intakeErr = null;
@@ -2725,35 +2761,39 @@ async function submitHybridIntake(){
   if(!normValid) h.intakeNorm = null;
   h.intakeBusy = true; render();
   try{
-    if(!S.parentId){
+    let parentId = ctx.parentId;
+    const norm = h.intakeNorm;
+    if(!parentId){
       const seeded = await fetch(`${API}/api/demo/seed`, {method:"POST"}).then(r=>r.json());
-      S.parentId = seeded.parent_id;
+      if(!current()) return;
+      parentId = seeded.parent_id;
     }
-    const symptoms = (normValid && h.intakeNorm.symptoms && h.intakeNorm.symptoms.length) ? h.intakeNorm.symptoms : [];
+    const symptoms = (normValid && norm?.symptoms?.length) ? norm.symptoms : [];
     const r = await fetch(`${API}/api/intake`, {
       method:"POST",
-      headers:{"content-type":"application/json", "Authorization":`Bearer ${S.token}`},
+      headers:{"content-type":"application/json", "Authorization":`Bearer ${ctx.token}`},
       body: JSON.stringify({
-        parent_id: S.parentId,
+        parent_id: parentId,
         symptoms,
         free_text: maskedFreeText,
         reported_by: "family_web_intake",
-        client_normalizer_source: normValid ? (h.intakeNorm.source || "") : "",
-        client_normalizer_note: normValid ? (h.intakeNorm.advisory_note || "") : "",
+        client_normalizer_source: normValid ? (norm.source || "") : "",
+        client_normalizer_note: normValid ? (norm.advisory_note || "") : "",
       }),
     });
     const out = await r.json();
+    if(!current()) return;
     if(!r.ok) throw new Error(out.detail || `HTTP ${r.status}`);
+    S.parentId = parentId;
     S.caseId = out.case_id;
     h.intakeSubmitted = `Triaged ${out.severity} -> ${out.recommended_hospital?.name || "hospital selected"} (Case ${out.case_id}).`;
     S.intakeOpen = false;
     S.view = "now";
     await load();
   }catch(e){
-    h.intakeErr = `Triage request failed: ${String(e)}`;
-    render();
+    if(current()){ h.intakeErr = `Triage request failed: ${String(e)}`; render(); }
   }finally{
-    h.intakeBusy = false;
+    if(current()){ h.intakeBusy = false; render(); }
   }
 }
 
@@ -2763,7 +2803,7 @@ function vHybridExplainCard(scope){
   return `<div class="card">
     <div class="hyb-bar">
       <div><h2 class="mini" style="margin:0">Plain-language companion (Hybrid AI)</h2>
-        <p class="mute" style="margin:2px 0 0;font-size:12.5px">Explains only what is already on this screen (desktop Chrome Gemini Nano when available, or Firebase cloud fallback; never invents advice).</p></div>
+        <p class="mute" style="margin:2px 0 0;font-size:12.5px">Explains only what is already on this screen (desktop Chrome Gemini Nano when available, or Firebase cloud fallback; advisory output requires review).</p></div>
       ${active?sourceBadge(h.explainSource):hybridStatusBadge(true)}
     </div>
     <div class="btns" style="margin-top:6px">
@@ -2779,7 +2819,7 @@ function vHybridExplainCard(scope){
     ${active?`<div class="hyb-out">
       <div style="white-space:pre-wrap">${esc(h.explainOut)}</div>
       <p class="mute" style="margin-top:8px;font-size:12px">
-        Derived strictly from the recorded fields shown below via ${h.explainSource==="on_device"?"on-device Gemini Nano":"cloud fallback"}. Not clinical advice.
+        Generated from the recorded fields shown below. ${sourceBadge(h.explainSource)} Not clinical advice.
       </p>
     </div>`:""}
   </div>`;
@@ -2787,9 +2827,9 @@ function vHybridExplainCard(scope){
 
 async function runHybridExplain(scope, lang){
   const h = S.hybrid;
-  const caseId = S.caseId;
+  const ctx = requestContext();
   const requestId = h.explainRequestId = (h.explainRequestId || 0) + 1;
-  const isCurrent = () => S.caseId === caseId && h.explainRequestId === requestId;
+  const isCurrent = () => contextIsCurrent(ctx) && h.explainRequestId === requestId;
   h.explainScope = scope;
   h.explainLang = lang;
   h.explainErr = null;
@@ -2833,9 +2873,9 @@ async function runHybridExplain(scope, lang){
       "",
       JSON.stringify(snapshot).slice(0, 6000),
     ].join("\n");
-    const res = await h.model.generateContent(prompt);
+    const res = await h.model.generateContent(prompt, {language:lang, inputLanguage:"en"});
     if(!isCurrent()) return;
-    const src = res.response.inferenceSource || "in_cloud";
+    const src = res.response.inferenceSource || "unknown";
     h.lastSource = src;
     h.explainSource = src;
     h.explainOut = (res.response.text() || "").trim();
@@ -2866,6 +2906,8 @@ function vDocUploadCard(){
 
 async function runDocUpload(){
   const h = S.hybrid;
+  const ctx = requestContext();
+  const current = () => contextIsCurrent(ctx);
   const input = document.getElementById("hyb-doc-file");
   const file = input?.files?.[0];
   h.uploadMsg = null;
@@ -2874,12 +2916,13 @@ async function runDocUpload(){
   try{
     const fd = new FormData();
     fd.append("file", file);
-    const r = await fetch(`${API}/api/cases/${encodeURIComponent(S.caseId)}/documents/ingest`, {
+    const r = await fetch(`${API}/api/cases/${encodeURIComponent(ctx.caseId)}/documents/ingest`, {
       method:"POST",
-      headers:{ Authorization:`Bearer ${S.token}` },
+      headers:{ Authorization:`Bearer ${ctx.token}` },
       body: fd,
     });
     const out = await r.json();
+    if(!current()) return;
     if(!r.ok) throw new Error(out.detail || `HTTP ${r.status}`);
     h.uploadOk = true;
     h.uploadMsg = out.kind === "bill"
@@ -2887,11 +2930,12 @@ async function runDocUpload(){
       : `Ingested ${String(out.kind || "document").replace(/_/g," ")}: ${out.summary || out.document_id}`;
     await load();
   }catch(e){
+    if(!current()) return;
     h.uploadOk = false;
     h.uploadMsg = `Not ingested: ${String(e)}`;
     render();
   }finally{
-    h.uploadBusy = false;
+    if(current()){ h.uploadBusy = false; render(); }
   }
 }
 

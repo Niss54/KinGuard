@@ -80,7 +80,7 @@ publicly documented Indian standards.
 | Discharge summary sections and field order | [NABH sample format, E-Mitra/FORMAT/04](https://nabh-portal-live.s3.ap-south-1.amazonaws.com/wp-content/uploads/2025/07/18074912/D.-E-Mitra_FORMAT-04_Hospital-Discharge-Summary-Format.pdf) | unverified, structural only |
 | Lab report layout: result, unit, biological reference interval, abnormal flag | [Drlogy pathology report formats](https://www.drlogy.com/pathology-lab-software/report-format) | unverified, structural only |
 | Room rent sub-limit typically 1% of sum insured per day, ICU 2% | [Onsurity](https://www.onsurity.com/blog/room-rent-icu-limits-in-health-insurance/), [Policybazaar](https://www.policybazaar.com/health-insurance/individual-health-insurance/articles/concept-of-room-rent-limit-in-health-insurance/) | unverified — matches the values already in `SUBLIMIT_RULES` |
-| **Proportionate deduction on exceeding room rent** | [Onsurity](https://www.onsurity.com/blog/room-rent-icu-limits-in-health-insurance/), [Acko](https://www.acko.com/health-insurance/room-rent-limit/) | unverified — **load-bearing, and NOT implemented** |
+| **Proportionate deduction on exceeding room rent** | [Onsurity](https://www.onsurity.com/blog/room-rent-icu-limits-in-health-insurance/), [Acko](https://www.acko.com/health-insurance/room-rent-limit/) | **Implemented as a policy-dependent estimate**; these explanatory sources and applicability to any real policy remain unverified |
 
 **The proportionate-deduction finding matters more than the documents.** Indian
 insurers do not merely deduct excess room rent when the room occupied is above

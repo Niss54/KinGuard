@@ -9,8 +9,11 @@ Recorded on 27 November 2026 from Nishant Maurya's explicit confirmation.
 
 The team has exactly two members. Nishant declares that KinGuard belongs to him
 and Avika. This records the team's ownership statement; Git commit counts do not
-allocate ownership or establish each person's contribution. No additional team
-members or individual role split are asserted.
+allocate ownership or establish each person's contribution. No additional team members are asserted.
+
+On 28 November 2026, Nishant assigned Firebase/API configuration, deployment and
+the demo video to Avika. These are assigned tasks, not evidence of completion.
+The remaining live acceptance steps are in the [judge guide](JUDGE_GUIDE.md).
 
 Nishant confirms that both members are Indian college students and both are over
 18. He identifies himself as the team's submission representative. These are

@@ -23,6 +23,6 @@ Deadline: November 30, 2026, 2:00 PM PST (December 1, 2026, 03:30 IST). Recheck 
 
 ## Reproduction and limits
 
-Run `uv sync --frozen --extra dev`, tests and the offline demo from the README. Set `PYTHONUTF8=1` on Windows. Node is required for behavioral JavaScript regressions. The shared demo bearer is for synthetic records, not per-user identity. Every POST /api/intake requires a family bearer, including new cases. Offline tests do not prove real model calls.
+Follow the [consolidated judge guide](JUDGE_GUIDE.md) for installation, seed/login, expected outputs and Avika's Firebase/deployment/video acceptance handoff. Run `uv sync --frozen --extra dev`, tests and the offline demo. Set `PYTHONUTF8=1` on Windows. Node is required for behavioral JavaScript regressions. The shared demo bearer is for synthetic records, not per-user identity. Every POST /api/intake requires a family bearer, including new cases. Offline tests do not prove real model calls.
 
 Receipt and count/head checkpoint commit atomically. Tail deletion is detected against the checkpoint. Old chains without a checkpoint fail closed; do not automatically bless their visible prefix. Database-wide rollback including checkpoints requires an external trust anchor, which is not implemented.

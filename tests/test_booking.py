@@ -1476,7 +1476,8 @@ def test_the_transport_caveat_is_said_once_not_on_every_line():
 
     page = pathlib.Path("kinguard/webui/index.html").read_text()
     assert page.count("acceptance, not a handset receipt") <= 1
-    assert "Said once here rather than" in page
+    assert "Actual delivery depends on the configured provider" in " ".join(page.split())
+    assert "this deployment sends through a sandbox" not in page
 
 
 def test_a_sent_message_says_what_it_was_about():

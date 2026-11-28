@@ -277,8 +277,11 @@ def test_signing_out_clears_the_session_and_the_record():
     page = _page()
     body = page[page.index("function signOut()"):]
     body = body[:body.index("\n}")]
-    for cleared in ("S.token = null", "S.who = null", "S.record = null"):
+    for cleared in ("S.token = null", "S.who = null", "S.linkToken = null"):
         assert cleared in body, f"signOut does not clear {cleared}"
+    assert "resetCaseScopedState(false)" in body
+    reset = page[page.index("function resetCaseScopedState("):page.index("function useCase(")]
+    assert "S.record = null" in reset
     # And Google is told, so the next sign-in asks rather than auto-selecting.
     assert "disableAutoSelect" in body
 

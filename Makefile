@@ -4,7 +4,7 @@ help:
 	@grep -E '^[a-z-]+:.*?##' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-16s %s\n", $$1, $$2}'
 
 install:  ## Install dependencies including dev extras
-	uv sync --extra dev
+	uv sync --frozen --extra dev
 
 test:  ## Run the test suite (no GCP or model access needed)
 	KINGUARD_STORE_BACKEND=memory uv run pytest -q

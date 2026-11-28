@@ -12,7 +12,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.9.9 /uv /uvx /bin/
 WORKDIR /app
 
 # Dependencies first, so a source-only change does not reinstall the world.
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md LICENSE ./
 RUN uv sync --frozen --no-install-project --no-dev
 
 COPY kinguard ./kinguard

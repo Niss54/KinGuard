@@ -346,7 +346,7 @@ def test_the_dashboard_script_actually_parses():
     from pathlib import Path
 
     html = (Path(__file__).parent.parent / "kinguard" / "webui" / "index.html").read_text()
-    assert html.count("<script>") == 1 and html.count("</script>") == 1
+    assert html.count("<script>") == 1 and html.count('src="/hybrid.js"') == 1
     script = html[html.index("<script>") + len("<script>"):html.rindex("</script>")]
 
     node = shutil.which("node")
@@ -458,7 +458,7 @@ def test_the_browser_is_not_stricter_than_the_server():
             / "kinguard" / "webui" / "index.html").read_text()
 
     assert "if(!S.token && !S.linkToken) return S.caseId ? gate() : vOpenOrWait();" in page
-    assert "if(S.parentId && (S.token || S.linkToken)){" in page
+    assert "if(next.parentId && (ctx.token || ctx.linkToken)){" in page
     assert "if(!S.token) return gate();" not in page
 
 

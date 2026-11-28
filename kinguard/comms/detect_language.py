@@ -11,7 +11,7 @@ WHY A SECOND, SMALLER MODEL. Everything else here runs on Gemini 3.5 Flash,
 which reads discharge summaries and hears Tamil out of a voice note. This asks
 one question with a two-letter answer, and spending a frontier model on a
 one-token classification is the wrong trade on a path that already owes her a
-reply inside fifteen seconds. Gemini 2.5 Flash Lite answers it and costs less.
+reply inside fifteen seconds. Gemini 3.5 Flash Lite answers it and costs less.
 That is the entire reason, and it is an architecture reason rather than a model
 count.
 
@@ -42,7 +42,7 @@ log = logging.getLogger(__name__)
 
 # The model, named here rather than in config, because this is the one call in
 # the system that deliberately does NOT use `settings().model`.
-MODEL = os.getenv("KINGUARD_DETECT_MODEL", "gemini-2.5-flash-lite")
+MODEL = os.getenv("KINGUARD_DETECT_MODEL", "gemini-3.5-flash-lite")
 
 # The closed list. Every language a family here plausibly writes in, and
 # nothing else. Widening it is an edit, not a thing the model can do.
@@ -113,10 +113,12 @@ def _ask(sample: str) -> str:
         model=MODEL,
         contents=_PROMPT + sample,
         config={
-            # A two-letter answer needs no room to reason itself into a
-            # sentence, and the cap is cheaper than parsing one.
-            "max_output_tokens": 8,
-            "temperature": 0.0,
+            # 3.5 Flash-Lite does not support custom sampling parameters. Leave those
+            # unset, and reserve enough output budget for a minimal-thinking
+            # response; detect() still accepts only the language allowlist.
+            "max_output_tokens": 128,
+            **({"thinking_config": {"thinking_level": "minimal"}}
+               if MODEL.startswith("gemini-3") else {}),
             "http_options": {"timeout": TIMEOUT_SECONDS * 1000},
         },
     )

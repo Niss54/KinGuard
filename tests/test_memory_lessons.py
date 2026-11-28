@@ -147,7 +147,7 @@ def test_a_lesson_written_in_one_session_is_recalled_in_another():
 
 # --- which language she actually writes in ----------------------------------
 #
-# The detector is a second, smaller model: Gemini 2.5 Flash Lite rather than the
+# The detector is a second, smaller model: Gemini 3.5 Flash Lite rather than the
 # 3.5 Flash everything else runs on, because this asks one question with a
 # two-letter answer. None of these tests spends a call. `_ask` is patched, so
 # what is under test is the constraint on the answer rather than the model.
@@ -238,8 +238,35 @@ def test_it_does_not_use_the_frontier_model(monkeypatch):
     from kinguard.comms import detect_language
     from kinguard.config import settings
 
-    assert detect_language.MODEL == "gemini-2.5-flash-lite"
+    assert detect_language.MODEL == "gemini-3.5-flash-lite"
     assert detect_language.MODEL != settings().model
+
+
+@pytest.mark.parametrize("reply,expected", [("en", "en"), ("ta", "ta"), ("hi", "hi"),
+                                           ("unknown", None), ("Tamil language", None)])
+def test_migrated_detector_request_and_output_validation(monkeypatch, reply, expected):
+    from types import SimpleNamespace
+
+    from google import genai
+    from google.genai import types
+
+    from kinguard.comms import detect_language
+
+    seen = []
+
+    def generate(**kwargs):
+        seen.append(kwargs)
+        config = types.GenerateContentConfig(**kwargs["config"])
+        assert config.temperature is None and config.top_p is None and config.top_k is None
+        assert config.thinking_config.thinking_level == "MINIMAL"
+        return SimpleNamespace(text=reply)
+
+    monkeypatch.setenv("KINGUARD_DETECT_LANGUAGE_MODE", "gemini")
+    monkeypatch.setattr(detect_language, "MODEL", "gemini-3.5-flash-lite")
+    monkeypatch.setattr(genai, "Client", lambda: SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate)))
+    assert detect_language.detect("synthetic language sample") == expected
+    assert seen[0]["model"] == "gemini-3.5-flash-lite"
 
 
 def test_nothing_is_learned_when_the_language_is_undetectable(monkeypatch, configured):

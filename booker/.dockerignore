@@ -1,0 +1,11 @@
+__pycache__/
+.venv/
+.pytest_cache/
+.env
+.env.*
+.local.env
+local.env
+*.pem
+keys/
+service-account*.json
+*.log

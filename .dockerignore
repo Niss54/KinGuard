@@ -1,4 +1,5 @@
 .venv/
+.kinguard/
 .git/
 .pytest_cache/
 .ruff_cache/

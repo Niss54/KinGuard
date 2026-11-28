@@ -221,6 +221,13 @@ def dashboard() -> FileResponse:
                         headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/hybrid.js")
+def hybrid_script() -> FileResponse:
+    """Public shared Firebase lifecycle code; contains no credentials or records."""
+    return FileResponse(WEBUI.with_name("hybrid.js"), media_type="text/javascript",
+                        headers={"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff"})
+
+
 LOGO = Path(__file__).resolve().parent / "webui" / "static" / "logo.png"
 
 
@@ -330,7 +337,7 @@ def firebase_config() -> dict[str, Any]:
     app_check_debug = os.getenv("KINGUARD_FIREBASE_APPCHECK_DEBUG", "").strip().lower() in {
         "1", "true", "yes", "on",
     }
-    model = (os.getenv("KINGUARD_FIREBASE_MODEL") or "gemini-2.5-flash").strip()
+    model = (os.getenv("KINGUARD_FIREBASE_MODEL") or "gemini-3.5-flash-lite").strip()
     configured = bool(api_key and project_id and app_id)
     return {
         "configured": configured,
@@ -3036,6 +3043,9 @@ def _order_form_html(token: str) -> str:
         f"<label class=fl for=dxnote>Bedside quick note (optional — extract order via Hybrid AI)</label>"
         f"<textarea id=dxnote class=fi rows=2 style='min-height:64px' "
         f"placeholder='e.g. Chest pain settled. Repeat troponin now; patient cannot travel.'></textarea>"
+        f"<label class=fl for=dxlang>Note language</label>"
+        f"<select id=dxlang class=fi><option value=auto>Mixed / Tamil / Hindi / unsure (cloud)</option>"
+        f"<option value=en>English (prefer on-device)</option></select>"
         f"<div style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px'>"
         f"<button id=dxextract class=fs type=button style='margin-top:0;width:auto;flex:1'>"
         f"Extract order (Hybrid AI)</button>"
@@ -3061,44 +3071,18 @@ def _order_form_html(token: str) -> str:
         f"<button id=dxgo class=fb type=button>Record the order</button>"
         f"<p id=dxout class=foot></p>"
         f"{_whatsapp_handshake_html(token)}</div>"
+        f"<script src=/hybrid.js></script>"
         f"<script type=module>"
-        f"const FB_CDN='https://www.gstatic.com/firebasejs/13.4.0';"
         f"const srcTag=document.getElementById('dxaisrc');"
         f"const exBtn=document.getElementById('dxextract');"
         f"const exOut=document.getElementById('dxaiout');"
-        f"let hybridModel=null, fbReady=false, fbReason='checking';"
+        f"let hybridModel=null, fbReason='checking';"
         f"async function initHandoffHybrid(){{"
         f"try{{"
-        f"const lmAvail=window.LanguageModel&&typeof window.LanguageModel.availability==='function'"
-        f"?await window.LanguageModel.availability({{expectedOutputs:[{{type:'text',languages:['en']}}]}}):'unavailable';"
         f"const cfg=await fetch('/api/firebase-config').then(r=>r.json());"
-        f"if(!cfg.configured){{"
-        f"fbReason=lmAvail==='available'?'On-device Gemini Nano ready (Firebase fallback unconfigured)':'Firebase AI config not set';"
-        f"srcTag.textContent=lmAvail==='available'?'On-device Nano available':'Hybrid unconfigured';"
-        f"return;}}"
-        f"const [{{initializeApp}},{{initializeAppCheck,ReCaptchaEnterpriseProvider,CustomProvider}},{{getAI,getGenerativeModel,GoogleAIBackend,InferenceMode}}]=await Promise.all(["
-        f"import(`${{FB_CDN}}/firebase-app.js`),"
-        f"import(`${{FB_CDN}}/firebase-app-check.js`),"
-        f"import(`${{FB_CDN}}/firebase-ai.js`)]);"
-        f"const app=initializeApp(cfg.firebase_config);"
-        f"let appCheckOk=false;"
-        f"if(cfg.app_check_debug){{self.FIREBASE_APPCHECK_DEBUG_TOKEN=true;}}"
-        f"if(cfg.recaptcha_site_key){{"
-        f"initializeAppCheck(app,{{provider:new ReCaptchaEnterpriseProvider(cfg.recaptcha_site_key),isTokenAutoRefreshEnabled:true}});"
-        f"appCheckOk=true;"
-        f"}}else if(cfg.app_check_debug){{"
-        f"initializeAppCheck(app,{{provider:new CustomProvider({{getToken:()=>Promise.reject(new Error('App Check debug mode active'))}}),isTokenAutoRefreshEnabled:true}});"
-        f"appCheckOk=true;"
-        f"}}"
-        f"if(lmAvail!=='available'&&!appCheckOk){{"
-        f"fbReason='App Check unconfigured (set KINGUARD_FIREBASE_RECAPTCHA_SITE_KEY or KINGUARD_FIREBASE_APPCHECK_DEBUG=true); cloud fallback unavailable.';"
-        f"srcTag.textContent='App Check Config Needed';"
-        f"return;}}"
-        f"const ai=getAI(app,{{backend:new GoogleAIBackend()}});"
-        f"hybridModel=getGenerativeModel(ai,{{mode:InferenceMode.PREFER_ON_DEVICE,inCloudParams:{{model:cfg.cloud_fallback_model||'gemini-2.5-flash'}}}});"
-        f"fbReady=true;"
-        f"srcTag.textContent=lmAvail==='available'?'Ready: On-device Gemini Nano':'Ready: Cloud fallback (Gemini)';"
-        f"}}catch(e){{fbReason=String(e);srcTag.textContent='Hybrid init error';}}"
+        f"hybridModel=await KinGuardHybrid.create(cfg,(message)=>{{srcTag.textContent=message;}});"
+        f"srcTag.textContent='Hybrid configured; inference starts on click';"
+        f"}}catch(e){{fbReason=String(e);srcTag.textContent='Hybrid unconfigured';}}"
         f"}}"
         f"initHandoffHybrid();"
         f"exBtn.addEventListener('click',async function(){{"
@@ -3110,11 +3094,16 @@ def _order_form_html(token: str) -> str:
         f"const prompt='Extract ONLY the diagnostic test being ordered and patient travel mobility from this bedside note. '"
         f"+'Return strict JSON with keys orders_test (string in English, empty if none) and mobility (one of ambulatory, non_ambulatory, unknown). '"
         f"+'Never invent tests or diagnoses. Note: '+note;"
-        f"const res=await hybridModel.generateContent(prompt);"
+        f"const previousTest=document.getElementById('dxtest').value;"
+        f"const previousMobility=document.getElementById('dxmob').value;"
+        f"const inputLanguage=document.getElementById('dxlang').value;"
+        f"const res=await hybridModel.generateContent(prompt,{{inputLanguage}});"
+        f"if(document.getElementById('dxnote').value.trim()!==note||document.getElementById('dxtest').value!==previousTest||document.getElementById('dxmob').value!==previousMobility||document.getElementById('dxlang').value!==inputLanguage){{"
+        f"exOut.textContent='Fields changed while AI was working. Review your edits or extract again.';return;}}"
         f"const raw=(res.response.text()||'').trim();"
         f"const jm=raw.match(/\\{{[\\s\\S]*\\}}/);"
         f"const parsed=JSON.parse(jm?jm[0]:raw);"
-        f"const src=res.response.inferenceSource==='on_device'?'On-Device (Gemini Nano)':'Cloud Fallback (Gemini)';"
+        f"const src=res.response.inferenceSource==='on_device'?'On-Device (Gemini Nano)':res.response.inferenceSource==='in_cloud'?'Cloud (Gemini)':'Inference source not reported';"
         f"srcTag.textContent=src;"
         f"if(parsed.orders_test)document.getElementById('dxtest').value=String(parsed.orders_test);"
         f"if(['ambulatory','non_ambulatory','unknown'].includes(parsed.mobility))document.getElementById('dxmob').value=parsed.mobility;"

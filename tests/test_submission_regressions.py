@@ -93,6 +93,7 @@ assert.ok(masked.includes('chest pain'));
 assert.ok(!masked.includes('9876543210') && !masked.includes('a@example.com'));
 const S = {caseId:'A',brief:{brief:{note:'A'}},hybrid:{ready:true}};
 const render = () => {};
+eval(extract('function requestContext(', 'async function api('));
 const pending = [];
 S.hybrid.model = {generateContent:()=>new Promise((resolve,reject)=>pending.push({resolve,reject}))};
 eval(extract('async function runHybridExplain(', 'function vDocUploadCard('));
@@ -120,7 +121,9 @@ const reply = text => ({response:{text:()=>text,inferenceSource:'on_device'}});
   const load=async()=>{};
   eval(extract('async function submitHybridIntake(', 'function vHybridExplainCard('));
   S.token=null; await submitHybridIntake(); assert.equal(calls,0);
-  S.token='family'; S.parentId='parent-B'; await submitHybridIntake(); assert.equal(calls,1);
+  S.token='family'; S.parentId='parent-B';
+  S.hybrid.intakeNorm={sourceText:'chest pain',symptoms:['chest pain'],source:'on_device'};
+  await submitHybridIntake(); assert.equal(calls,1);
 })().catch(e=>{console.error(e);process.exitCode=1});
 '''
     result = subprocess.run([node, "-e", script], cwd=root, capture_output=True,

@@ -26,6 +26,7 @@ def test_firebase_config_unconfigured_by_default(client: TestClient, monkeypatch
         "KINGUARD_FIREBASE_API_KEY",
         "KINGUARD_FIREBASE_PROJECT_ID",
         "KINGUARD_FIREBASE_APP_ID",
+        "KINGUARD_FIREBASE_MODEL",
     ):
         monkeypatch.delenv(var, raising=False)
 
@@ -34,7 +35,7 @@ def test_firebase_config_unconfigured_by_default(client: TestClient, monkeypatch
     body = res.json()
     assert body["configured"] is False
     assert body["firebase_config"] is None
-    assert body["cloud_fallback_model"] == "gemini-2.5-flash"
+    assert body["cloud_fallback_model"] == "gemini-3.5-flash-lite"
 
 
 def test_firebase_config_returns_public_fields_and_never_leaks_secrets(
@@ -60,10 +61,13 @@ def test_firebase_config_returns_public_fields_and_never_leaks_secrets(
 
 def test_dashboard_and_handoff_wire_firebase_ai_logic_once(client: TestClient) -> None:
     app_html = client.get("/app").text
-    assert app_html.count("const FB_SDK_VER = \"13.4.0\";") == 1
-    assert "InferenceMode.PREFER_ON_DEVICE" in app_html
-    assert "ReCaptchaEnterpriseProvider" in app_html
-
+    assert app_html.count('src="/hybrid.js"') == 1
+    shared = client.get("/hybrid.js")
+    assert shared.status_code == 200
+    assert 'SDK_VERSION = "13.4.0"' in shared.text
+    assert "InferenceMode.PREFER_ON_DEVICE" in shared.text
+    assert "ReCaptchaEnterpriseProvider" in shared.text
+    assert "initializeDeviceModel" in shared.text
     pid = onboarding_tools.create_parent_profile(
         name="Test Parent", age=72, city="Thoothukudi", lat=8.76, lon=78.14,
         chronic_conditions=["Hypertension"], allergies=[],
@@ -87,7 +91,8 @@ def test_dashboard_and_handoff_wire_firebase_ai_logic_once(client: TestClient) -
         assert rw_mint.status_code == 200
         handoff_url = rw_mint.json()["url"]
         handoff_html = client.get(handoff_url).text
-        assert "InferenceMode.PREFER_ON_DEVICE" in handoff_html
+        assert "KinGuardHybrid.create" in handoff_html
+        assert "src=/hybrid.js" in handoff_html
         assert "dxextract" in handoff_html
 
 

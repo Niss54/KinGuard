@@ -16,4 +16,4 @@ COPY . .
 
 # One request at a time. A browser is stateful and two of them in a gigabyte is
 # how this falls over under exactly the load it was built for.
-CMD exec uvicorn app:app --host 0.0.0.0 --port ${PORT} --workers 1
+CMD ["sh", "-c", "exec uvicorn app:app --host 0.0.0.0 --port ${PORT} --workers 1"]

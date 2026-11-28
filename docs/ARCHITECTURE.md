@@ -151,7 +151,7 @@ cannot silently overwrite an earlier sequence slot. `verify_chain` also pins the
 signer public key (`load_signer().public_key_b64` plus optional rotated keys) rather than
 trusting a self-supplied public key inside a tampered receipt.
 
-A `MemoryStore` implements the same interface, which is why 1,279 tests run with no
+A `MemoryStore` implements the same interface, which is why offline regression tests run with no
 GCP access at all.
 
 ## Why the TPA is simulated, and says so
@@ -227,7 +227,7 @@ gets confused produces a worse *explanation*, not a worse *decision*.
   against Google Places, with a `place_id` and verification date on every
   record, so distance is real. Capability and insurer empanelment remain a dated
   seed and say so — no feed publishes them.
-- **No content templates on the WhatsApp sender.** Freeform sends succeed only
+- **WhatsApp delivery depends on the configured provider and templates.** No deployed sender/template state is verified here. Freeform sends are permitted only
   inside WhatsApp's 24-hour customer service window; a cold business-initiated
   send fails, and is recorded as `comms.not_delivered` rather than claimed.
 - **A placed call is not an answered call.** Escalation walks the contacts in
